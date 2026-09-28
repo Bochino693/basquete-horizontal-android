@@ -1,0 +1,12 @@
+[gd_scene format=3 uid="uid://bwustclrdviw8"]
+
+[ext_resource type="Script" uid="uid://cqt206gh8v3hf" path="res://scripts/network_versus_test.gd" id="1_etxqu"]
+
+[node name="Control" type="Control" unique_id=1818047847]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_etxqu")
