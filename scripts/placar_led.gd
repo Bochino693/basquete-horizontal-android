@@ -81,10 +81,11 @@ func _draw() -> void:
 		brilho *= 0.35
 	var acesa := Color(min(cor.r * brilho, 1.0), min(cor.g * brilho, 1.0), min(cor.b * brilho, 1.0))
 	var apagada := Color(cor.r * 0.13, cor.g * 0.13, cor.b * 0.13, 0.9)
-	var brilho_cor := Color(cor.r, cor.g, cor.b, 0.22 + _flash * 0.25)
-	_pontos = PoolVector2Array()
-	_cores = PoolColorArray()
-	_indices = PoolIntArray()
+	var brilho_cor := Color(cor.r, cor.g, cor.b, 0.30 + _flash * 0.3)
+	# Segmentos com a borda lisa e um brilho macio em volta dos acesos,
+	# tudo num lote só de triângulos: UMA chamada de desenho por placar.
+	_lote.preparar(self)
+	var acesos := []
 	var x := 0.0
 	for i in range(digitos):
 		if espaco_grupo and i > 0 and (digitos - i) % 3 == 0:
@@ -94,31 +95,17 @@ func _draw() -> void:
 		for s in "abcdefg":
 			var pts := _segmento(s, Vector2(x + (larg_dig - w) / 2, 0), w, alt, t)
 			if s in ligados:
-				_hexagono(_engordar(pts, t * 0.55), brilho_cor)
-				_hexagono(pts, acesa)
+				acesos.append(pts)
+				_lote.aura(pts, brilho_cor, t * 0.9)
 			else:
-				_hexagono(pts, apagada)
+				_lote.poligono(pts, apagada)
 		x += larg_dig
-	# Tudo num lote só de triângulos: UMA chamada de desenho por placar
-	# (antes eram até 84; a GPU da TV Box 7.1 sente cada uma).
-	VisualServer.canvas_item_add_triangle_array(get_canvas_item(), _indices, _pontos, _cores)
+	for pts in acesos:
+		_lote.poligono(pts, acesa)
+	_lote.desenhar(self)
 
 
-var _pontos := PoolVector2Array()
-var _cores := PoolColorArray()
-var _indices := PoolIntArray()
-
-
-## Hexágono do segmento em 4 triângulos, acrescentado ao lote.
-func _hexagono(pts: PoolVector2Array, cor: Color) -> void:
-	var b := _pontos.size()
-	for p in pts:
-		_pontos.append(p)
-		_cores.append(cor)
-	for tri in [[0, 1, 5], [1, 2, 4], [1, 4, 5], [2, 3, 4]]:
-		_indices.append(b + tri[0])
-		_indices.append(b + tri[1])
-		_indices.append(b + tri[2])
+var _lote = preload("res://scripts/traco_suave.gd").new()
 
 
 func _segmento(s: String, o: Vector2, w: float, h: float, t: float) -> PoolVector2Array:
@@ -163,15 +150,3 @@ func _segmento(s: String, o: Vector2, w: float, h: float, t: float) -> PoolVecto
 		# itálico: quanto mais alto, mais para a direita
 		pts.append(o + Vector2(p.x + (h - p.y) * inclinacao, p.y))
 	return pts
-
-
-func _engordar(pts: PoolVector2Array, quanto: float) -> PoolVector2Array:
-	var c := Vector2.ZERO
-	for p in pts:
-		c += p
-	c /= pts.size()
-	var r := PoolVector2Array()
-	for p in pts:
-		var v: Vector2 = p - c
-		r.append(c + v + v.normalized() * quanto)
-	return r

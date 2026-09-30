@@ -32,7 +32,7 @@ func _ready() -> void:
 	anchor_bottom = 1
 	mouse_filter = MOUSE_FILTER_IGNORE
 	var fundo := TextureRect.new()
-	fundo.texture = load(imagem)
+	fundo.texture = load(_imagem_para_tela())
 	fundo.expand = true
 	fundo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	fundo.anchor_right = 1
@@ -59,7 +59,7 @@ func _ready() -> void:
 		var s := Sprite.new()
 		s.texture = tex_brilho
 		s.material = aditivo
-		s.scale = Vector2(14.0, 0.9 + randf() * 0.8)
+		s.scale = Vector2(7.0, 0.45 + randf() * 0.4)
 		s.rotation_degrees = -28 + randf() * 12
 		var c: Color = cores[i % cores.size()]
 		s.modulate = Color(c.r, c.g, c.b, 0.0)
@@ -92,7 +92,7 @@ func _ready() -> void:
 	_faiscas.gravity = Vector2(0, -8)
 	_faiscas.initial_velocity = 40
 	_faiscas.initial_velocity_random = 0.6
-	_faiscas.scale_amount = 0.6
+	_faiscas.scale_amount = 0.3
 	_faiscas.scale_amount_random = 0.8
 	var rampa := Gradient.new()
 	rampa.set_color(0, Color(1, 0.7, 0.3, 0.0))
@@ -111,6 +111,17 @@ func _ready() -> void:
 	add_child(_flash)
 	_posicionar()
 	connect("resized", self, "_posicionar")
+
+
+## Janela em 720p (TV Box que roda a interface em 1280x720): usa a versão
+## da arte já reduzida com filtro bom. Reduzir a de 1920 na placa de vídeo,
+## sem mipmap, deixa as linhas finas e as lâmpadas serrilhadas.
+func _imagem_para_tela() -> String:
+	if OS.window_size.y < 900:
+		var menor := imagem.replace(".png", "_720.png")
+		if ResourceLoader.exists(menor):
+			return menor
+	return imagem
 
 
 func _posicionar() -> void:

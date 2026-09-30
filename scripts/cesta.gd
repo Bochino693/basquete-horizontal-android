@@ -22,6 +22,9 @@ var _estica := 0.0        # rede esticada (mola)
 var _estica_vel := 0.0
 var _ondas := []          # ondas de choque [{t, cor}]
 var _tex_bola: Texture
+const TracoSuave = preload("res://scripts/traco_suave.gd")
+var _lote_atras = TracoSuave.new()
+var _lote_frente = TracoSuave.new()
 
 
 func _ready() -> void:
@@ -32,7 +35,7 @@ func _ready() -> void:
 	_halo = Sprite.new()
 	_halo.texture = load("res://imagens/brilho.png")
 	_halo.material = aditivo
-	_halo.scale = Vector2(3.4, 1.3)
+	_halo.scale = Vector2(1.7, 0.65)
 	_halo.position = Vector2(0, 10)
 	_halo.modulate = Color(1.0, 0.45, 0.1, 0.35)
 	add_child(_halo)
@@ -48,7 +51,7 @@ func _ready() -> void:
 
 	_faiscas = _criar_explosao(load("res://imagens/faisca.png"), 34, aditivo)
 	_estrelas = _criar_explosao(load("res://imagens/estrela.png"), 10, aditivo)
-	_estrelas.scale_amount = 0.7
+	_estrelas.scale_amount = 0.35
 
 	_fogo = CPUParticles2D.new()
 	_fogo.texture = load("res://imagens/brilho.png")
@@ -62,7 +65,7 @@ func _ready() -> void:
 	_fogo.gravity = Vector2(0, -260)
 	_fogo.initial_velocity = 90
 	_fogo.initial_velocity_random = 0.5
-	_fogo.scale_amount = 0.55
+	_fogo.scale_amount = 0.275
 	_fogo.scale_amount_random = 0.5
 	var rampa := Gradient.new()
 	rampa.set_color(0, Color(1, 0.95, 0.5, 0.9))
@@ -95,7 +98,7 @@ func _criar_explosao(tex: Texture, qtd: int, mat: Material) -> CPUParticles2D:
 	p.gravity = Vector2(0, 520)
 	p.initial_velocity = 360
 	p.initial_velocity_random = 0.5
-	p.scale_amount = 0.9
+	p.scale_amount = 0.45
 	p.scale_amount_random = 0.6
 	var rampa := Gradient.new()
 	rampa.set_color(0, Color(1, 1, 0.8, 1))
@@ -175,9 +178,11 @@ func _elipse(cx: float, cy: float, rx: float, ry: float, a0: float, a1: float, n
 func _desenhar_atras() -> void:
 	var c := _cor_aro()
 	# metade de trás do aro (em cima na tela)
-	var tras := _elipse(0, 0, raio_x, raio_y, PI, TAU, 24)
-	_atras.draw_polyline(tras, Color(c.r, c.g, c.b, 0.25), 14.0, true)
-	_atras.draw_polyline(tras, c.darkened(0.25), 6.0, true)
+	var tras := _elipse(0, 0, raio_x, raio_y, PI, TAU, 32)
+	_lote_atras.preparar(_atras)
+	_lote_atras.linha_brilho(tras, Color(c.r, c.g, c.b, 0.4), 18.0)
+	_lote_atras.linha(tras, c.darkened(0.25), 6.0)
+	_lote_atras.desenhar(_atras)
 
 
 func _desenhar_frente() -> void:
@@ -196,25 +201,29 @@ func _desenhar_frente() -> void:
 		topo.append(Vector2(cos(a) * raio_x, sin(a) * raio_y))
 		meio.append(Vector2(cos(a) * raio_x * lerp(1.0, estreita, 0.55) + balanco * 0.5, comp * 0.5 + sin(a) * raio_y * 0.7))
 		base.append(Vector2(cos(a) * raio_x * estreita + balanco, comp + sin(a) * raio_y * 0.5))
-	# Todos os fios em duas chamadas (draw_multiline), não uma por fio.
-	var fios := PoolVector2Array()
+	# Bordas lisas feitas à mão (o "antialiased" não vale no GLES2 da TV Box);
+	# a rede inteira e o aro vão num lote só de triângulos.
+	var lote = _lote_frente
+	lote.preparar(_frente)
 	for i in range(n + 1):
-		fios.append_array(PoolVector2Array([topo[i], meio[i], meio[i], base[i]]))
-	_frente.draw_multiline(fios, cor_rede, 2.0, true)
+		lote.linha(PoolVector2Array([topo[i], meio[i], base[i]]), cor_rede, 2.0)
 	# trama cruzada
 	var trama := PoolVector2Array()
 	for i in range(n):
 		trama.append_array(PoolVector2Array([topo[i], meio[i + 1], topo[i + 1], meio[i], meio[i], base[i + 1], meio[i + 1], base[i]]))
-	_frente.draw_multiline(trama, Color(1, 1, 1, 0.55), 1.5, true)
-	_frente.draw_polyline(PoolVector2Array(base), cor_rede, 2.0, true)
+	lote.segmentos(trama, Color(1, 1, 1, 0.55), 1.5)
+	lote.linha(PoolVector2Array(base), cor_rede, 2.0)
 	# metade da frente do aro
-	var frente := _elipse(0, 0, raio_x, raio_y, 0, PI, 24)
-	_frente.draw_polyline(frente, Color(c.r, c.g, c.b, 0.35), 16.0, true)
-	_frente.draw_polyline(frente, c, 7.0, true)
-	_frente.draw_polyline(_elipse(0, -1.5, raio_x, raio_y, 0.15, PI - 0.15, 18), Color(1, 0.95, 0.8, 0.8), 2.0, true)
+	var frente := _elipse(0, 0, raio_x, raio_y, 0, PI, 32)
+	lote.linha_brilho(frente, Color(c.r, c.g, c.b, 0.5), 22.0)
+	lote.linha(frente, c, 7.0)
+	lote.linha(_elipse(0, -1.5, raio_x, raio_y, 0.15, PI - 0.15, 24), Color(1, 0.95, 0.8, 0.8), 2.0)
 	# ondas de choque
 	for o in _ondas:
 		var k: float = o.t / 0.6
 		var cor_o: Color = o.cor
 		cor_o.a = (1.0 - k) * 0.9
-		_frente.draw_polyline(_elipse(0, 0, raio_x * (1.0 + k * 1.6), raio_y * (1.0 + k * 1.6), 0, TAU, 40), cor_o, 5.0 * (1.0 - k) + 1.0, true)
+		var anel := _elipse(0, 0, raio_x * (1.0 + k * 1.6), raio_y * (1.0 + k * 1.6), 0, TAU, 48)
+		anel.remove(anel.size() - 1)
+		lote.linha(anel, cor_o, 5.0 * (1.0 - k) + 1.0, true)
+	lote.desenhar(_frente)

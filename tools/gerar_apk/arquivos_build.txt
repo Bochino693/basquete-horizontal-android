@@ -24,8 +24,12 @@ imagens/feixe.png
 imagens/feixe.png.import
 imagens/fundo_abertura.png
 imagens/fundo_abertura.png.import
+imagens/fundo_abertura_720.png
+imagens/fundo_abertura_720.png.import
 imagens/fundo_arena.png
 imagens/fundo_arena.png.import
+imagens/fundo_arena_720.png
+imagens/fundo_arena_720.png.import
 imagens/fundo_arena_mascara.png
 imagens/fundo_arena_mascara.png.import
 imagens/fundo_icone.png
@@ -54,6 +58,7 @@ scripts/jogo.gd
 scripts/leds_usb.gd
 scripts/partida.gd
 scripts/placar_led.gd
+scripts/traco_suave.gd
 scripts/ui.gd
 shaders/luzes_arena.shader
 sons/alerta.wav

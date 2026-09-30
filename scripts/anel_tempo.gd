@@ -9,6 +9,7 @@ var restante := 40.0
 var alerta := 10.0
 var _t := 0.0
 var _led: Control
+var _lote = preload("res://scripts/traco_suave.gd").new()
 
 
 func _ready() -> void:
@@ -58,13 +59,18 @@ func _draw() -> void:
 	var pulso := 1.0
 	if restante <= alerta and restante > 0:
 		pulso = 1.0 + abs(sin(_t * 6.0)) * 0.6
-	draw_arc(c, r, 0, TAU, 64, Color(1, 1, 1, 0.08), 12.0, true)
+	# Bordas lisas feitas à mão (o "antialiased" do draw_arc não vale no GLES2).
+	_lote.preparar(self)
+	_lote.linha(_lote.arco(c, r, 0, TAU, 72, false), Color(1, 1, 1, 0.08), 12.0, true)
 	if k > 0.0:
 		var a0 := -PI / 2
 		var a1 := a0 + TAU * k
-		draw_arc(c, r, a0, a1, 64, Color(cor.r, cor.g, cor.b, 0.25 * pulso), 22.0, true)
-		draw_arc(c, r, a0, a1, 64, cor, 10.0, true)
+		var lados := int(max(4, 72 * k))
+		var arco: PoolVector2Array = _lote.arco(c, r, a0, a1, lados)
+		_lote.linha_brilho(arco, Color(cor.r, cor.g, cor.b, 0.35 * pulso), 26.0)
+		_lote.linha(arco, cor, 10.0)
 		# pontinha brilhante do anel
 		var ponta := c + Vector2(cos(a1), sin(a1)) * r
-		draw_circle(ponta, 9.0, Color(1, 1, 1, 0.9))
-		draw_circle(ponta, 16.0, Color(cor.r, cor.g, cor.b, 0.35))
+		_lote.brilho_redondo(ponta, 18.0, Color(cor.r, cor.g, cor.b, 0.5))
+		_lote.circulo(ponta, 8.0, Color(1, 1, 1, 0.92))
+	_lote.desenhar(self)

@@ -40,13 +40,13 @@ func _ready() -> void:
 	_halo.texture = load("res://imagens/brilho.png")
 	_halo.material = aditivo
 	_halo.position = CESTA_ARTE + Vector2(0, 30)
-	_halo.scale = Vector2(3.2, 2.4)
+	_halo.scale = Vector2(1.6, 1.2)
 	add_child(_halo)
 
 	_varredura = Sprite.new()
 	_varredura.texture = load("res://imagens/brilho.png")
 	_varredura.material = aditivo
-	_varredura.scale = Vector2(0.9, 4.2)
+	_varredura.scale = Vector2(0.45, 2.1)
 	_varredura.rotation_degrees = 18
 	_varredura.modulate = Color(1, 1, 1, 0.0)
 	add_child(_varredura)
@@ -55,6 +55,7 @@ func _ready() -> void:
 	_explosao.texture = load("res://imagens/estrela.png")
 	_explosao.material = aditivo
 	_explosao.amount = 26
+	_explosao.scale_amount = 0.5   # estrela.png tem 128 px
 	_explosao.one_shot = true
 	_explosao.explosiveness = 0.95
 	_explosao.lifetime = 1.0

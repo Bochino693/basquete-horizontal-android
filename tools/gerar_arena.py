@@ -260,6 +260,10 @@ img = por_cima(img, camada_blur(lamp_base, 0.8))
 final = Image.fromarray((np.clip(img, 0, 1) * 255).astype(np.uint8), "RGB")
 final.save(os.path.join(IMG, "fundo_arena.png"), optimize=True)
 print("fundo_arena.png", final.size)
+# Versao para TV Box que roda a janela em 720p: reduzida aqui com filtro bom
+# (a placa de video reduz sem mipmap e as linhas finas e lampadas serrilham).
+final.resize((1280, 720), Image.LANCZOS).save(os.path.join(IMG, "fundo_arena_720.png"), optimize=True)
+print("fundo_arena_720.png", (1280, 720))
 
 # ------------------------------------------------------------ mascara
 MW, MH = W // 2, H // 2

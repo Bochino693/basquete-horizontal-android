@@ -230,7 +230,7 @@ func _criar_chamas_da_tela() -> CPUParticles2D:
 	p.gravity = Vector2(0, -120)
 	p.initial_velocity = 170
 	p.initial_velocity_random = 0.5
-	p.scale_amount = 1.3
+	p.scale_amount = 0.65
 	p.scale_amount_random = 0.6
 	var rampa := Gradient.new()
 	rampa.set_color(0, Color(1, 0.9, 0.4, 0.8))
@@ -614,7 +614,7 @@ func _festa_recorde() -> void:
 	confete.initial_velocity = 120
 	confete.angular_velocity = 180
 	confete.angular_velocity_random = 1.0
-	confete.scale_amount = 0.7
+	confete.scale_amount = 0.35
 	confete.scale_amount_random = 0.6
 	confete.hue_variation = 1.0
 	confete.hue_variation_random = 1.0
