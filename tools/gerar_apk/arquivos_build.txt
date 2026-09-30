@@ -104,5 +104,6 @@ sons/vai.wav.import
 tools/.gdignore
 tools/gerar_apk/EXPORTAR_APK_ANDROID.bat
 tools/gerar_apk/GERAR_APK_COMPLETO.ps1
+tools/gerar_apk/arquivos_build.txt
 tools/gerar_arte.py
 tools/gerar_sons.py
