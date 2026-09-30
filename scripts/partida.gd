@@ -98,8 +98,11 @@ func _montar() -> void:
 	add_child(_raiz)
 
 	fundo = preload("res://scripts/fundo_animado.gd").new()
-	fundo.imagem = "res://imagens/fundo_quadra.png"
-	fundo.escurecer = 0.10
+	fundo.imagem = "res://imagens/fundo_arena.png"
+	fundo.mascara = "res://imagens/fundo_arena_mascara.png"
+	fundo.holofotes = [Vector2(120, 32), Vector2(373, 32), Vector2(907, 32), Vector2(1160, 32)]
+	fundo.qtd_feixes = 2
+	fundo.escurecer = 0.0
 	_raiz.add_child(fundo)
 
 	cesta = preload("res://scripts/cesta.gd").new()

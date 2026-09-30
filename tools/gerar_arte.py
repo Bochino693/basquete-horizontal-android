@@ -103,3 +103,15 @@ lado = int(W * 0.62)
 x0, y0 = int(W * 0.04), (H - lado) // 2
 ic = ab.crop((x0, y0, x0 + lado, y0 + lado)).resize((432, 432), Image.LANCZOS)
 salvar(ic, "icone.png")
+
+# Facho de refletor: cone estreito em cima, largo embaixo, sumindo (branco;
+# a cor vem do jogo). Usado com mistura aditiva na arena.
+fw, fh = 256, 640
+yy, xx = np.mgrid[0:fh, 0:fw].astype(np.float32)
+larg = 0.06 + 0.94 * (yy / fh)
+dx = np.abs(xx - fw / 2) / (fw / 2) / larg
+a = np.clip(1 - dx, 0, 1) ** 1.8 * (1 - yy / fh) ** 1.3 * np.clip(yy / 40, 0, 1)
+arr = np.zeros((fh, fw, 4), np.uint8)
+arr[..., :3] = 255
+arr[..., 3] = (a * 255).astype(np.uint8)
+salvar(Image.fromarray(arr, "RGBA").filter(ImageFilter.GaussianBlur(3)), "feixe.png")

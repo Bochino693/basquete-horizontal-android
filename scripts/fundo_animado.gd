@@ -2,12 +2,19 @@ extends Control
 
 ## Fundo vivo: a arte cobrindo a tela, feixes de luz coloridos varrendo
 ## devagar, faíscas subindo e um flash de cor para os momentos fortes.
-## Leve para a TV Box: poucos sprites com mistura aditiva, sem shader.
+## Leve para a TV Box: poucos sprites com mistura aditiva.
+##
+## Com "mascara" (arena da partida): as luzes da própria arte ganham vida
+## com o shader luzes_arena (neon correndo, lâmpadas em sequência, faixa de
+## LED), a mesma técnica do brilho da pista do Dragon Bowling. "holofotes"
+## são os pontos do teto de onde saem fachos de luz balançando.
 
-export var imagem := "res://imagens/fundo_quadra.png"
+export var imagem := "res://imagens/fundo_arena.png"
 export var escurecer := 0.0
 export var qtd_feixes := 4
 export var qtd_faiscas := 36
+export var mascara := ""
+export var holofotes := []
 export var cores := [Color(1.0, 0.48, 0.10), Color(0.55, 0.24, 1.0), Color(1.0, 0.18, 0.55), Color(0.13, 0.88, 1.0)]
 
 var _feixes := []
@@ -15,7 +22,9 @@ var _t := 0.0
 var _flash: ColorRect
 var _escuro: ColorRect
 var _faiscas: CPUParticles2D
-var intensidade := 1.0   # 1 normal; mais alto deixa tudo mais aceso (EM CHAMAS)
+var intensidade := 1.0 setget definir_intensidade   # 1 normal; mais alto = EM CHAMAS
+var _material: ShaderMaterial
+var _fachos := []
 
 
 func _ready() -> void:
@@ -29,6 +38,11 @@ func _ready() -> void:
 	fundo.anchor_right = 1
 	fundo.anchor_bottom = 1
 	fundo.mouse_filter = MOUSE_FILTER_IGNORE
+	if mascara != "":
+		_material = ShaderMaterial.new()
+		_material.shader = load("res://shaders/luzes_arena.shader")
+		_material.set_shader_param("mascara", load(mascara))
+		fundo.material = _material
 	add_child(fundo)
 
 	_escuro = ColorRect.new()
@@ -52,6 +66,19 @@ func _ready() -> void:
 		add_child(s)
 		_feixes.append({"no": s, "fase": randf() * TAU, "vel": 0.12 + randf() * 0.10,
 			"y": 0.15 + 0.7 * float(i) / max(1, qtd_feixes - 1), "cor": c})
+
+	var tex_facho: Texture = load("res://imagens/feixe.png")
+	var cores_facho := [Color(1.0, 0.92, 0.75), Color(0.65, 0.4, 1.0), Color(1.0, 0.6, 0.25), Color(1.0, 0.92, 0.75)]
+	for i in range(holofotes.size()):
+		var f := Sprite.new()
+		f.texture = tex_facho
+		f.centered = false
+		f.offset = Vector2(-tex_facho.get_width() / 2.0, 0)
+		f.position = holofotes[i]
+		f.scale = Vector2(1.5, 1.3)
+		f.material = aditivo
+		add_child(f)
+		_fachos.append({"no": f, "fase": randf() * TAU, "cor": cores_facho[i % cores_facho.size()]})
 
 	_faiscas = CPUParticles2D.new()
 	_faiscas.texture = load("res://imagens/faisca.png")
@@ -101,6 +128,11 @@ func _process(delta: float) -> void:
 		var a := sin(ciclo * PI) * 0.22 * intensidade
 		var c: Color = f.cor
 		s.modulate = Color(c.r, c.g, c.b, a)
+	for f in _fachos:
+		var sp: Sprite = f.no
+		sp.rotation = sin(_t * 0.45 + f.fase) * 0.26
+		var c: Color = f.cor
+		sp.modulate = Color(c.r, c.g, c.b, (0.16 + 0.06 * sin(_t * 1.3 + f.fase)) * min(intensidade, 1.8))
 	if _flash.color.a > 0.0:
 		_flash.color.a = max(0.0, _flash.color.a - delta * 2.2)
 
@@ -113,3 +145,13 @@ func flash(cor: Color, forca: float = 0.35) -> void:
 func definir_faiscas(qtd: int, cor_rapida := false) -> void:
 	_faiscas.amount = qtd
 	_faiscas.initial_velocity = 120 if cor_rapida else 40
+
+
+func definir_intensidade(v: float) -> void:
+	intensidade = v
+	if _material != null:
+		var fogo := v > 1.5
+		_material.set_shader_param("velocidade", 2.4 if fogo else 1.0)
+		_material.set_shader_param("intensidade", 1.35 if fogo else 1.0)
+		_material.set_shader_param("cor_neon", Color(1.0, 0.32, 0.08) if fogo else Color(1.0, 0.78, 0.22))
+		_material.set_shader_param("cor_lampada", Color(1.0, 0.45, 0.2) if fogo else Color(1.0, 0.86, 0.45))

@@ -43,7 +43,7 @@ var _barra_titulo: ColorRect
 
 func _ready() -> void:
 	var fundo = preload("res://scripts/fundo_animado.gd").new()
-	fundo.imagem = "res://imagens/fundo_quadra.png"
+	fundo.imagem = "res://imagens/fundo_arena.png"
 	fundo.escurecer = 0.45
 	fundo.qtd_feixes = 2
 	add_child(fundo)

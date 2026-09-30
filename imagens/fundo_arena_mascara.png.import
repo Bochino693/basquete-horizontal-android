@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/fundo_quadra.png-0b6c8361739db423da36ea12380e886e.stex"
+path="res://.import/fundo_arena_mascara.png-7d98dbd1415fb9665ca48dd85c2ac910.stex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://imagens/fundo_quadra.png"
-dest_files=[ "res://.import/fundo_quadra.png-0b6c8361739db423da36ea12380e886e.stex" ]
+source_file="res://imagens/fundo_arena_mascara.png"
+dest_files=[ "res://.import/fundo_arena_mascara.png-7d98dbd1415fb9665ca48dd85c2ac910.stex" ]
 
 [params]
 

@@ -20,12 +20,16 @@ imagens/estrela.png
 imagens/estrela.png.import
 imagens/faisca.png
 imagens/faisca.png.import
+imagens/feixe.png
+imagens/feixe.png.import
 imagens/fundo_abertura.png
 imagens/fundo_abertura.png.import
+imagens/fundo_arena.png
+imagens/fundo_arena.png.import
+imagens/fundo_arena_mascara.png
+imagens/fundo_arena_mascara.png.import
 imagens/fundo_icone.png
 imagens/fundo_icone.png.import
-imagens/fundo_quadra.png
-imagens/fundo_quadra.png.import
 imagens/icone.png
 imagens/icone.png.import
 imagens/logo_lazer_sport.png
@@ -51,6 +55,7 @@ scripts/leds_usb.gd
 scripts/partida.gd
 scripts/placar_led.gd
 scripts/ui.gd
+shaders/luzes_arena.shader
 sons/alerta.wav
 sons/alerta.wav.import
 sons/apito.wav
@@ -105,5 +110,6 @@ tools/.gdignore
 tools/gerar_apk/EXPORTAR_APK_ANDROID.bat
 tools/gerar_apk/GERAR_APK_COMPLETO.ps1
 tools/gerar_apk/arquivos_build.txt
+tools/gerar_arena.py
 tools/gerar_arte.py
 tools/gerar_sons.py
