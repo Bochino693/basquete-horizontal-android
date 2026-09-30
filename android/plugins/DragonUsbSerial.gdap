@@ -1,0 +1,13 @@
+; PLUGIN USB DO DRAGON BOWLING (Arduino dos LEDs) — formato do Godot 3.
+; O .aar é o do Godot 4 reempacotado (tools/dragon_usb_plugin_g3).
+
+[config]
+
+name="DragonUsbSerial"
+binary_type="local"
+binary="DragonUsbSerial-release.aar"
+
+[dependencies]
+
+remote=["com.github.mik3y:usb-serial-for-android:3.11.0"]
+custom_maven_repos=["https://jitpack.io"]

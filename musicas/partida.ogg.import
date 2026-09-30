@@ -1,0 +1,15 @@
+[remap]
+
+importer="ogg_vorbis"
+type="AudioStreamOGGVorbis"
+path="res://.import/partida.ogg-3be1a9f208ff1c46641a484c0c65d7a1.oggstr"
+
+[deps]
+
+source_file="res://musicas/partida.ogg"
+dest_files=[ "res://.import/partida.ogg-3be1a9f208ff1c46641a484c0c65d7a1.oggstr" ]
+
+[params]
+
+loop=true
+loop_offset=0

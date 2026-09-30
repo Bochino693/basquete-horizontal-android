@@ -1,53 +1,65 @@
 ; Engine configuration file.
-; It's best edited using the editor UI and not directly,
-; since the parameters that go here are not all obvious.
-;
-; Format:
-;   [section] ; section goes between []
-;   param=value ; assign values to parameters
+; Swish Arena - TV Box Android 7.1 em diante (Godot 3.6, GLES2).
 
-config_version=5
+config_version=4
 
 [application]
 
-config/name="beta10"
-run/main_scene="uid://dtlnjkye7nam5"
-config/features=PackedStringArray("4.6", "GL Compatibility")
-boot_splash/show_image=false
-config/icon="res://icon.svg"
+config/name="Swish Arena"
+run/main_scene="res://cenas/abertura.tscn"
+boot_splash/image="res://imagens/splash.png"
+boot_splash/fullsize=true
+boot_splash/use_filter=true
+boot_splash/bg_color=Color( 0.03, 0.02, 0.08, 1 )
+config/icon="res://imagens/icone.png"
 
 [autoload]
 
-Rede="*uid://c7258556fojww"
+Jogo="*res://scripts/jogo.gd"
+Leds="*res://scripts/leds_usb.gd"
 
 [display]
 
-window/size/mode=3
+window/size/width=1280
+window/size/height=720
+window/size/fullscreen=true
+window/handheld/orientation="sensor_landscape"
+window/stretch/mode="2d"
+window/stretch/aspect="expand"
+window/energy_saving/keep_screen_on=true
+window/vsync/use_vsync=true
+
+[gui]
+
+common/drop_mouse_on_gui_input_disabled=true
 
 [input]
 
 input_start={
-"deadzone": 0.2,
-"events": [Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":6,"pressure":0.0,"pressed":true,"script":null)
-]
+"deadzone": 0.5,
+"events": [ Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":6,"pressure":0.0,"pressed":false,"script":null), Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":0,"alt":false,"shift":false,"control":false,"meta":false,"command":false,"pressed":false,"scancode":49,"physical_scancode":0,"unicode":0,"echo":false,"script":null), Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":0,"alt":false,"shift":false,"control":false,"meta":false,"command":false,"pressed":false,"scancode":16777221,"physical_scancode":0,"unicode":0,"echo":false,"script":null) ]
 }
 input_select={
-"deadzone": 0.2,
-"events": [Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":4,"pressure":0.0,"pressed":true,"script":null)
-]
+"deadzone": 0.5,
+"events": [ Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":4,"pressure":0.0,"pressed":false,"script":null), Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":0,"alt":false,"shift":false,"control":false,"meta":false,"command":false,"pressed":false,"scancode":50,"physical_scancode":0,"unicode":0,"echo":false,"script":null) ]
 }
 input_pointer={
-"deadzone": 0.2,
-"events": [Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":2,"pressure":0.0,"pressed":true,"script":null)
-]
+"deadzone": 0.5,
+"events": [ Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":2,"pressure":0.0,"pressed":false,"script":null), Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":0,"alt":false,"shift":false,"control":false,"meta":false,"command":false,"pressed":false,"scancode":67,"physical_scancode":0,"unicode":0,"echo":false,"script":null), Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":0,"alt":false,"shift":false,"control":false,"meta":false,"command":false,"pressed":false,"scancode":51,"physical_scancode":0,"unicode":0,"echo":false,"script":null) ]
 }
 
-[physics]
+[input_devices]
 
-3d/physics_engine="Jolt Physics"
+pointing/emulate_touch_from_mouse=false
 
 [rendering]
 
-rendering_device/driver.windows="d3d12"
-renderer/rendering_method="gl_compatibility"
-renderer/rendering_method.mobile="gl_compatibility"
+quality/driver/driver_name="GLES2"
+quality/driver/fallback_to_gles2=true
+vram_compression/import_etc=true
+vram_compression/import_etc2=false
+2d/snapping/use_gpu_pixel_snap=false
+environment/default_clear_color=Color( 0.03, 0.02, 0.08, 1 )
+quality/intended_usage/framebuffer_allocation=0
+quality/intended_usage/framebuffer_allocation.mobile=0
+threads/thread_model=1
