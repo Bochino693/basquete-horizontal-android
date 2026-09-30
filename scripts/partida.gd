@@ -220,7 +220,7 @@ func _criar_chamas_da_tela() -> CPUParticles2D:
 	aditivo.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 	p.material = aditivo
 	p.texture = load("res://imagens/brilho.png")
-	p.amount = 70
+	p.amount = 40
 	p.lifetime = 1.1
 	p.position = Vector2(640, 740)
 	p.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
@@ -230,7 +230,7 @@ func _criar_chamas_da_tela() -> CPUParticles2D:
 	p.gravity = Vector2(0, -120)
 	p.initial_velocity = 170
 	p.initial_velocity_random = 0.5
-	p.scale_amount = 0.65
+	p.scale_amount = 0.45
 	p.scale_amount_random = 0.6
 	var rampa := Gradient.new()
 	rampa.set_color(0, Color(1, 0.9, 0.4, 0.8))

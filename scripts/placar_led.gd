@@ -4,10 +4,14 @@ extends Control
 ## Os segmentos apagados aparecem escuros (dá a cara de painel de verdade),
 ## os acesos têm brilho em volta. O número sobe contando até o valor novo e
 ## o painel dá um "flash" a cada mudança.
+##
+## LEVE PARA A TV BOX: só redesenha quando o número mostrado (ou a cor) muda.
+## O flash e o pisca-pisca mudam o brilho do nó (self_modulate), sem refazer
+## os segmentos.
 
 export var digitos := 6
 export var espaco_grupo := true        # "040 000": espaço a cada 3 dígitos
-export var cor := Color(1.0, 0.48, 0.10)
+export var cor := Color(1.0, 0.48, 0.10) setget definir_cor
 export var inclinacao := 0.10          # itálico dos dígitos
 export var contar := true              # anima a contagem até o valor
 
@@ -16,6 +20,7 @@ var _exibido := 0.0
 var _flash := 0.0
 var _piscar := false
 var _t := 0.0
+var _texto_desenhado := ""
 
 const SEGMENTOS := {
 	"0": "abcdef", "1": "bc", "2": "abged", "3": "abgcd", "4": "fgbc",
@@ -31,6 +36,13 @@ func definir_valor(v: int) -> void:
 	if not contar:
 		_exibido = v
 	set_process(true)
+
+
+func definir_cor(c: Color) -> void:
+	if c == cor:
+		return
+	cor = c
+	update()
 
 
 func mostrar_direto(v: int) -> void:
@@ -59,29 +71,38 @@ func _process(delta: float) -> void:
 	if _flash > 0.0:
 		_flash = max(0.0, _flash - delta * 2.5)
 		ativo = true
+	if _texto() != _texto_desenhado:
+		update()
+	# flash e pisca-pisca pelo brilho do nó: não redesenha
+	var b := 1.0 + _flash * 0.6
 	if _piscar:
 		ativo = true
-	update()
+		if fmod(_t, 0.5) < 0.2:
+			b *= 0.35
+	self_modulate = Color(b, b, b, 1.0)
 	if not ativo:
 		set_process(false)
 
 
-func _draw() -> void:
+func _texto() -> String:
 	var texto := str(int(round(_exibido))).pad_zeros(digitos)
 	if texto.length() > digitos:
 		texto = texto.right(texto.length() - digitos)
+	return texto
+
+
+func _draw() -> void:
+	var texto := _texto()
+	_texto_desenhado = texto
 	var grupos := int(ceil(digitos / 3.0)) - 1 if espaco_grupo else 0
 	var larg_total := rect_size.x
 	var alt := rect_size.y
 	var larg_dig := larg_total / (digitos + grupos * 0.45)
 	var w := larg_dig * 0.78
 	var t := min(w * 0.19, alt * 0.11)
-	var brilho := 1.0 + _flash * 0.6
-	if _piscar and fmod(_t, 0.5) < 0.2:
-		brilho *= 0.35
-	var acesa := Color(min(cor.r * brilho, 1.0), min(cor.g * brilho, 1.0), min(cor.b * brilho, 1.0))
+	var acesa := Color(cor.r, cor.g, cor.b)
 	var apagada := Color(cor.r * 0.13, cor.g * 0.13, cor.b * 0.13, 0.9)
-	var brilho_cor := Color(cor.r, cor.g, cor.b, 0.30 + _flash * 0.3)
+	var brilho_cor := Color(cor.r, cor.g, cor.b, 0.34)
 	# Segmentos com a borda lisa e um brilho macio em volta dos acesos,
 	# tudo num lote só de triângulos: UMA chamada de desenho por placar.
 	_lote.preparar(self)

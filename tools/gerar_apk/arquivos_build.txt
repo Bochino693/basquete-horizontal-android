@@ -56,11 +56,13 @@ scripts/config.gd
 scripts/fundo_animado.gd
 scripts/jogo.gd
 scripts/leds_usb.gd
+scripts/malha_luz.gd
 scripts/partida.gd
 scripts/placar_led.gd
 scripts/traco_suave.gd
 scripts/ui.gd
 shaders/luzes_arena.shader
+shaders/rede_mola.shader
 sons/alerta.wav
 sons/alerta.wav.import
 sons/apito.wav
