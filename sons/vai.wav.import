@@ -1,0 +1,23 @@
+[remap]
+
+importer="wav"
+type="AudioStreamSample"
+path="res://.import/vai.wav-3fe8d441fa4242d22dbd38707b141038.sample"
+
+[deps]
+
+source_file="res://sons/vai.wav"
+dest_files=[ "res://.import/vai.wav-3fe8d441fa4242d22dbd38707b141038.sample" ]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=0

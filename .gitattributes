@@ -1,2 +1,6 @@
 # Normalize EOL for all files that Git considers text files.
 * text=auto eol=lf
+# Arquivos do Windows (os .bat e o .ps1 rodam no PC que gera o APK).
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+LEIA-ME*.txt text eol=crlf

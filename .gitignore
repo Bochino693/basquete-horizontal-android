@@ -1,4 +1,12 @@
-# Godot 4+ specific ignores
-.godot/
-/android/
-.godot/
+# Godot 3.6 (TV Box): cache de importação e o modelo Android que o
+# GERAR_APK extrai no PC. android/plugins (plugin USB dos LEDs) FICA no git.
+.import/
+/android/build/
+/android/.build_version
+/build/
+/APK-Pronto/
+*.apk
+*.idsig
+/logs/
+/sobras_de_versoes_antigas/
+tools/__pycache__/

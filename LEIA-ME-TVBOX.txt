@@ -1,0 +1,66 @@
+SWISH ARENA - BASQUETE ARCADE 1 JOGADOR - TV BOX ANDROID 7.1 EM DIANTE
+======================================================================
+
+Jogo novo, no estilo das maquinas de basquete modernas (Game On): placar
+de LED gigante, fases com meta, modo EM CHAMAS, ultimos segundos valendo
+mais, ranking e recorde. Feito no Godot 3.6 (GLES2) para rodar leve ate na
+TV Box S905L (Android 7.1). O jogo antigo continua no branch main.
+
+
+1) COMO JOGAR
+-------------
+  - APERTE START na abertura. Contagem 3-2-1-VAI.
+  - FASE 1 e FASE 2 tem uma META de pontos. Bateu a meta: passa de fase
+    quando o tempo acabar. Nao bateu: fim de jogo.
+  - FINAL: faca o maximo de pontos.
+  - Cesta vale 2. Nos ULTIMOS 10 SEGUNDOS de cada fase vale 3.
+  - 4 cestas seguidas (menos de 3 s entre elas) = EM CHAMAS: pontos x2
+    por 8 segundos (renova enquanto continuar acertando).
+  - No fim: pontuacao, cestas, maior combo, posicao no ranking e recorde.
+    START joga de novo; sem nada, volta para a abertura sozinho.
+  Tudo isso e ajustavel na CONFIGURACAO.
+
+
+2) BOTOES (ZERO DELAY, IGUAIS AO JOGO ANTIGO)
+---------------------------------------------
+  START ............ botao 6 da Zero Delay
+  SELECT ........... botao 4
+  SENSOR DA CESTA .. botao 2 (cada sinal = uma cesta)
+  No PC: 1 = START, 2 = SELECT, C = cesta, F10 = configuracao.
+
+
+3) CONFIGURACAO (SEGURE SELECT 4 SEGUNDOS NA ABERTURA)
+------------------------------------------------------
+  SELECT passa para o proximo item, START muda o valor.
+  - Tempo de cada fase, meta da fase 1 e 2.
+  - Pontos por cesta e nos ultimos segundos.
+  - TRAVA DO SENSOR: tempo minimo entre duas cestas (evita contar a mesma
+    bola duas vezes). Padrao 1,2 s como no jogo antigo. Se o sensor da sua
+    maquina da um sinal limpo por bola, diminua para jogadas rapidas.
+  - Cestas seguidas para EM CHAMAS, volumes.
+  - TESTE DO SENSOR: jogue uma bola e veja o contador de sinais.
+  - TESTAR LEDS, ZERAR RANKING (pede START duas vezes), SALVAR E SAIR.
+
+
+4) LEDS (ARDUINO)
+-----------------
+  O mesmo Arduino e os mesmos comandos do jogo antigo (uma linha por
+  comando, 9600 baud): IDLE, PLAY, HIT, BOOST, RECORD, OFF. Agora pelo cabo
+  USB da TV Box (plugin USB no APK). Na primeira vez o Android pergunta se
+  o jogo pode usar o aparelho USB: marque "Usar por padrao" e OK.
+
+
+5) GERAR O APK E INSTALAR (SEMPRE ASSIM)
+----------------------------------------
+  - No PC: dois cliques em GERAR_APK_AGORA.bat.
+  - Sai em build\android\SwishArena-S905L.apk
+  - Pendrive -> TV Box -> instalar.
+
+
+6) ARQUIVOS
+-----------
+  cenas/      abertura, partida, config
+  scripts/    jogo.gd (config, ranking, sons, fontes), leds_usb.gd,
+              placar_led.gd, cesta.gd, fundo_animado.gd, anel_tempo.gd...
+  tools/      gerar_sons.py e gerar_arte.py (efeitos e pecas geradas por
+              codigo), gerar_apk/ (gerador do APK)
