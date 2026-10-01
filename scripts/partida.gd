@@ -31,6 +31,9 @@ var meta_batida := false
 var fogo_restante := 0.0
 var _ultima_cesta_t := -100.0
 var _trava_ate := 0.0
+# o sensor tem que SOLTAR antes da próxima cesta: sensor preso/segurado
+# (bola parada no sensor, botão apertado) não faz ponto nenhum
+var _sensor_solto := false
 var _t := 0.0
 var _ultimo_segundo := -1
 var _sprint_avisado := false
@@ -331,7 +334,14 @@ func _banner(titulo: String, sub: String, cor: Color, dur: float) -> void:
 
 # ================================================================== CESTA
 func _input(ev: InputEvent) -> void:
-	if ev.is_action_pressed("input_pointer") and not ev.is_echo():
+	if ev.is_action_released("input_pointer"):
+		_sensor_solto = true
+	elif ev.is_action_pressed("input_pointer") and not ev.is_echo():
+		# só vale quando o sensor ACIONA depois de ter soltado (preso ou
+		# segurado não faz ponto nem reinicia)
+		if not _sensor_solto:
+			return
+		_sensor_solto = false
 		if estado == RESULTADO:
 			# no resultado, uma cesta joga de novo (depois de 3 s: a bola
 			# que ainda caía no fim do tempo não reinicia sem querer)
@@ -352,6 +362,7 @@ func _jogar_de_novo() -> void:
 
 
 func _sensor() -> void:
+	# no mínimo a trava (0,7 s) depois da cesta anterior
 	if estado != JOGANDO:
 		return
 	if _t < _trava_ate:
@@ -486,6 +497,8 @@ func _sair_fogo() -> void:
 
 # ================================================================== RELÓGIO
 func _process(delta: float) -> void:
+	if not _sensor_solto and not Input.is_action_pressed("input_pointer"):
+		_sensor_solto = true
 	_t += delta
 	# tremor da tela
 	if _tremor > 0.0:

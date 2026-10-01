@@ -16,7 +16,7 @@ var itens := [
 	{"chave": "pontos_cesta", "nome": "PONTOS POR CESTA", "opcoes": [1, 2, 3], "fmt": "%d"},
 	{"chave": "pontos_sprint", "nome": "PONTOS NOS ÚLTIMOS SEGUNDOS", "opcoes": [2, 3, 4, 5], "fmt": "%d"},
 	{"chave": "segundos_sprint", "nome": "ÚLTIMOS SEGUNDOS VALENDO MAIS", "opcoes": [0, 5, 10, 15], "fmt": "%d s"},
-	{"chave": "trava_sensor", "nome": "TRAVA DO SENSOR (ENTRE CESTAS)", "opcoes": [0.3, 0.4, 0.5, 0.6, 0.8, 1.0, 1.2, 1.5], "fmt": "%.1f s"},
+	{"chave": "trava_sensor", "nome": "TRAVA DO SENSOR (ENTRE CESTAS)", "opcoes": [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0, 1.2, 1.5], "fmt": "%.1f s"},
 	{"chave": "cestas_fogo", "nome": "CESTAS SEGUIDAS P/ EM CHAMAS", "opcoes": [3, 4, 5, 6, 8], "fmt": "%d"},
 	{"chave": "volume_musica", "nome": "VOLUME DA MÚSICA", "opcoes": [0, 20, 40, 60, 70, 80, 100], "fmt": "%d%%"},
 	{"chave": "volume_efeitos", "nome": "VOLUME DOS EFEITOS", "opcoes": [0, 20, 40, 60, 80, 100], "fmt": "%d%%"},
