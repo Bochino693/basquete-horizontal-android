@@ -20,6 +20,14 @@ func _ready() -> void:
 	_led.contar = false
 	_led.cor = Jogo.VERDE
 	add_child(_led)
+	_halo = Control.new()
+	_halo.mouse_filter = MOUSE_FILTER_IGNORE
+	_halo.show_behind_parent = true
+	_halo.anchor_right = 1
+	_halo.anchor_bottom = 1
+	add_child(_halo)
+	move_child(_halo, 0)
+	_halo.connect("draw", self, "_desenhar_halo")
 	connect("resized", self, "_ajustar")
 	_ajustar()
 
@@ -48,29 +56,71 @@ func _process(delta: float) -> void:
 		_led.valor = seg
 	_led.cor = _cor()
 	_led.piscar(restante <= 5.0 and restante > 0.0)
-	update()
-
-
-func _draw() -> void:
-	var c := rect_size / 2
-	var r := min(rect_size.x, rect_size.y) * 0.5 - 12
-	var cor := _cor()
+	# Só redesenha quando o arco anda um "passo" visível (240 por volta) ou
+	# muda de cor; o pulso dos segundos finais é o brilho do nó do halo.
 	var k := clamp(restante / max(total, 0.001), 0.0, 1.0)
+	var passo := int(ceil(k * PASSOS))
+	var cor := _cor()
+	if passo != _passo_desenhado or cor != _cor_desenhada:
+		_passo_desenhado = passo
+		_cor_desenhada = cor
+		update()
+		_halo.update()
 	var pulso := 1.0
 	if restante <= alerta and restante > 0:
 		pulso = 1.0 + abs(sin(_t * 6.0)) * 0.6
-	# Bordas lisas feitas à mão (o "antialiased" do draw_arc não vale no GLES2).
-	_lote.preparar(self)
-	_lote.linha(_lote.arco(c, r, 0, TAU, 72, false), Color(1, 1, 1, 0.08), 12.0, true)
+	_halo.self_modulate = Color(pulso, pulso, pulso, 1.0)
+
+
+const PASSOS := 240
+var _passo_desenhado := -1
+var _cor_desenhada := Color(0, 0, 0, 0)
+var _halo: Control
+var _lote_fundo = preload("res://scripts/traco_suave.gd").new()
+var _lote_halo = preload("res://scripts/traco_suave.gd").new()
+var _tamanho_fundo := Vector2.ZERO
+
+
+func _geometria() -> Array:
+	var c := rect_size / 2
+	var r := min(rect_size.x, rect_size.y) * 0.5 - 12
+	var k := float(_passo_desenhado) / PASSOS
+	var a0 := -PI / 2
+	var a1 := a0 + TAU * k
+	return [c, r, k, a0, a1]
+
+
+func _draw() -> void:
+	var g := _geometria()
+	var c: Vector2 = g[0]
+	var r: float = g[1]
+	var k: float = g[2]
+	var a1: float = g[4]
+	# anel de fundo: montado uma vez (só de novo se o tamanho mudar)
+	if _tamanho_fundo != rect_size:
+		_tamanho_fundo = rect_size
+		_lote_fundo.preparar(self)
+		_lote_fundo.linha(_lote_fundo.arco(c, r, 0, TAU, 72, false), Color(1, 1, 1, 0.08), 12.0, true)
+	_lote_fundo.desenhar(self)
 	if k > 0.0:
-		var a0 := -PI / 2
-		var a1 := a0 + TAU * k
-		var lados := int(max(4, 72 * k))
-		var arco: PoolVector2Array = _lote.arco(c, r, a0, a1, lados)
-		_lote.linha_brilho(arco, Color(cor.r, cor.g, cor.b, 0.35 * pulso), 26.0)
-		_lote.linha(arco, cor, 10.0)
-		# pontinha brilhante do anel
-		var ponta := c + Vector2(cos(a1), sin(a1)) * r
-		_lote.brilho_redondo(ponta, 18.0, Color(cor.r, cor.g, cor.b, 0.5))
-		_lote.circulo(ponta, 8.0, Color(1, 1, 1, 0.92))
-	_lote.desenhar(self)
+		var cor := _cor_desenhada
+		_lote.preparar(self)
+		_lote.linha(_lote.arco(c, r, g[3], a1, int(max(4, 72 * k))), cor, 10.0)
+		_lote.circulo(c + Vector2(cos(a1), sin(a1)) * r, 8.0, Color(1, 1, 1, 0.92))
+		_lote.desenhar(self)
+
+
+## Halo do arco (fica atrás do anel e pulsa pelo brilho do nó).
+func _desenhar_halo() -> void:
+	var g := _geometria()
+	var k: float = g[2]
+	if k <= 0.0:
+		return
+	var c: Vector2 = g[0]
+	var r: float = g[1]
+	var a1: float = g[4]
+	var cor := _cor_desenhada
+	_lote_halo.preparar(_halo)
+	_lote_halo.linha_brilho(_lote_halo.arco(c, r, g[3], a1, int(max(4, 72 * k))), Color(cor.r, cor.g, cor.b, 0.35), 26.0)
+	_lote_halo.brilho_redondo(c + Vector2(cos(a1), sin(a1)) * r, 18.0, Color(cor.r, cor.g, cor.b, 0.5))
+	_lote_halo.desenhar(_halo)

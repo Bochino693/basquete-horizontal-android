@@ -3,6 +3,11 @@ extends Node2D
 ## A CESTA NA TELA: aro neon e rede desenhados por código, bola caindo pelo
 ## aro a cada ponto, rede esticando (mola), faíscas, onda de choque e fogo
 ## no modo EM CHAMAS. A origem deste nó é o centro do aro.
+##
+## LEVE PARA A TV BOX: aro e rede são desenhados UMA vez. A cor do aro muda
+## pelo modulate do nó; o balanço e a esticada da rede são feitos pela placa
+## de vídeo (shader rede_mola). Só as ondas de choque redesenham, e só
+## enquanto existem.
 
 export var raio_x := 96.0
 export var raio_y := 15.0
@@ -11,7 +16,11 @@ export var altura_rede := 104.0
 var em_chamas := false setget _set_chamas
 
 var _atras: Node2D
-var _frente: Node2D
+var _rede: Node2D
+var _aro: Node2D
+var _aro_brilho: Node2D
+var _ondas_no: Node2D
+var _mat_rede: ShaderMaterial
 var _bolas: Node2D
 var _faiscas: CPUParticles2D
 var _estrelas: CPUParticles2D
@@ -24,7 +33,11 @@ var _ondas := []          # ondas de choque [{t, cor}]
 var _tex_bola: Texture
 const TracoSuave = preload("res://scripts/traco_suave.gd")
 var _lote_atras = TracoSuave.new()
-var _lote_frente = TracoSuave.new()
+var _lote_rede = TracoSuave.new()
+var _lote_aro = TracoSuave.new()
+var _lote_aro_brilho = TracoSuave.new()
+var _lote_ondas = TracoSuave.new()
+var _tinha_ondas := false
 
 
 func _ready() -> void:
@@ -40,14 +53,18 @@ func _ready() -> void:
 	_halo.modulate = Color(1.0, 0.45, 0.1, 0.35)
 	add_child(_halo)
 
-	_atras = Node2D.new()
-	add_child(_atras)
-	_atras.connect("draw", self, "_desenhar_atras")
+	_atras = _camada("_desenhar_atras")
 	_bolas = Node2D.new()
 	add_child(_bolas)
-	_frente = Node2D.new()
-	add_child(_frente)
-	_frente.connect("draw", self, "_desenhar_frente")
+	_rede = _camada("_desenhar_rede")
+	_mat_rede = ShaderMaterial.new()
+	_mat_rede.shader = load("res://shaders/rede_mola.shader")
+	_mat_rede.set_shader_param("altura", altura_rede)
+	_mat_rede.set_shader_param("topo", raio_y)
+	_rede.material = _mat_rede
+	_aro = _camada("_desenhar_aro")
+	_aro_brilho = _camada("_desenhar_aro_brilho")
+	_ondas_no = _camada("_desenhar_ondas")
 
 	_faiscas = _criar_explosao(load("res://imagens/faisca.png"), 34, aditivo)
 	_estrelas = _criar_explosao(load("res://imagens/estrela.png"), 10, aditivo)
@@ -80,6 +97,13 @@ func _ready() -> void:
 	_fogo.emitting = false
 	add_child(_fogo)
 	move_child(_fogo, 1)
+
+
+func _camada(metodo: String) -> Node2D:
+	var n := Node2D.new()
+	add_child(n)
+	n.connect("draw", self, metodo, [n])
+	return n
 
 
 func _criar_explosao(tex: Texture, qtd: int, mat: Material) -> CPUParticles2D:
@@ -157,8 +181,15 @@ func _process(delta: float) -> void:
 		_ondas.pop_front()
 	var pulso := 0.30 + sin(_t * 3.0) * 0.08
 	_halo.modulate = Color(1.0, 0.25, 0.05, pulso + 0.25) if em_chamas else Color(1.0, 0.45, 0.1, pulso)
-	_atras.update()
-	_frente.update()
+	var c := _cor_aro()
+	_atras.modulate = c
+	_aro.modulate = c
+	# a rede balança e estica na placa de vídeo: só 2 números por quadro
+	_mat_rede.set_shader_param("estica", _estica)
+	_mat_rede.set_shader_param("balanco", sin(_t * 2.2) * 3.0)
+	if not _ondas.empty() or _tinha_ondas:
+		_ondas_no.update()
+	_tinha_ondas = not _ondas.empty()
 
 
 func _cor_aro() -> Color:
@@ -175,55 +206,74 @@ func _elipse(cx: float, cy: float, rx: float, ry: float, a0: float, a1: float, n
 	return pts
 
 
-func _desenhar_atras() -> void:
-	var c := _cor_aro()
-	# metade de trás do aro (em cima na tela)
-	var tras := _elipse(0, 0, raio_x, raio_y, PI, TAU, 32)
-	_lote_atras.preparar(_atras)
-	_lote_atras.linha_brilho(tras, Color(c.r, c.g, c.b, 0.4), 18.0)
-	_lote_atras.linha(tras, c.darkened(0.25), 6.0)
-	_lote_atras.desenhar(_atras)
+# Aro e rede em branco: a cor vem do modulate do nó (muda sem redesenhar).
+func _desenhar_atras(no: Node2D) -> void:
+	if _lote_atras.indices.size() == 0:
+		# metade de trás do aro (em cima na tela)
+		var tras := _elipse(0, 0, raio_x, raio_y, PI, TAU, 32)
+		_lote_atras.preparar(no)
+		_lote_atras.linha_brilho(tras, Color(1, 1, 1, 0.4), 18.0)
+		_lote_atras.linha(tras, Color(0.75, 0.75, 0.75), 6.0)
+	_lote_atras.desenhar(no)
 
 
-func _desenhar_frente() -> void:
-	var c := _cor_aro()
-	# rede: fios do aro até a boca de baixo, que estreita quando estica
-	var n := 12
-	var comp := altura_rede * (1.0 + _estica * 0.35)
-	var estreita := 0.55 - _estica * 0.12
-	var balanco := sin(_t * 2.2) * 3.0
-	var cor_rede := Color(1, 1, 1, 0.85)
-	var topo := []
-	var meio := []
-	var base := []
-	for i in range(n + 1):
-		var a: float = lerp(0.0, PI, float(i) / n)   # só a frente (metade de baixo)
-		topo.append(Vector2(cos(a) * raio_x, sin(a) * raio_y))
-		meio.append(Vector2(cos(a) * raio_x * lerp(1.0, estreita, 0.55) + balanco * 0.5, comp * 0.5 + sin(a) * raio_y * 0.7))
-		base.append(Vector2(cos(a) * raio_x * estreita + balanco, comp + sin(a) * raio_y * 0.5))
-	# Bordas lisas feitas à mão (o "antialiased" não vale no GLES2 da TV Box);
-	# a rede inteira e o aro vão num lote só de triângulos.
-	var lote = _lote_frente
-	lote.preparar(_frente)
-	for i in range(n + 1):
-		lote.linha(PoolVector2Array([topo[i], meio[i], base[i]]), cor_rede, 2.0)
-	# trama cruzada
-	var trama := PoolVector2Array()
-	for i in range(n):
-		trama.append_array(PoolVector2Array([topo[i], meio[i + 1], topo[i + 1], meio[i], meio[i], base[i + 1], meio[i + 1], base[i]]))
-	lote.segmentos(trama, Color(1, 1, 1, 0.55), 1.5)
-	lote.linha(PoolVector2Array(base), cor_rede, 2.0)
-	# metade da frente do aro
-	var frente := _elipse(0, 0, raio_x, raio_y, 0, PI, 32)
-	lote.linha_brilho(frente, Color(c.r, c.g, c.b, 0.5), 22.0)
-	lote.linha(frente, c, 7.0)
-	lote.linha(_elipse(0, -1.5, raio_x, raio_y, 0.15, PI - 0.15, 24), Color(1, 0.95, 0.8, 0.8), 2.0)
-	# ondas de choque
+## Rede em repouso; o shader rede_mola estica e balança.
+func _desenhar_rede(no: Node2D) -> void:
+	if _lote_rede.indices.size() == 0:
+		var n := 12
+		var comp := altura_rede
+		var estreita := 0.55
+		var cor_rede := Color(1, 1, 1, 0.85)
+		var topo := []
+		var meio := []
+		var base := []
+		for i in range(n + 1):
+			var a: float = lerp(0.0, PI, float(i) / n)   # só a frente (metade de baixo)
+			topo.append(Vector2(cos(a) * raio_x, sin(a) * raio_y))
+			meio.append(Vector2(cos(a) * raio_x * lerp(1.0, estreita, 0.55), comp * 0.5 + sin(a) * raio_y * 0.7))
+			base.append(Vector2(cos(a) * raio_x * estreita, comp + sin(a) * raio_y * 0.5))
+		var lote = _lote_rede
+		lote.preparar(no)
+		for i in range(n + 1):
+			lote.linha(PoolVector2Array([topo[i], meio[i], base[i]]), cor_rede, 2.0)
+		# trama cruzada
+		var trama := PoolVector2Array()
+		for i in range(n):
+			trama.append_array(PoolVector2Array([topo[i], meio[i + 1], topo[i + 1], meio[i], meio[i], base[i + 1], meio[i + 1], base[i]]))
+		lote.segmentos(trama, Color(1, 1, 1, 0.55), 1.5)
+		lote.linha(PoolVector2Array(base), cor_rede, 2.0)
+	_lote_rede.desenhar(no)
+
+
+## Metade da frente do aro (branca; cor pelo modulate).
+func _desenhar_aro(no: Node2D) -> void:
+	if _lote_aro.indices.size() == 0:
+		var frente := _elipse(0, 0, raio_x, raio_y, 0, PI, 32)
+		_lote_aro.preparar(no)
+		_lote_aro.linha_brilho(frente, Color(1, 1, 1, 0.5), 22.0)
+		_lote_aro.linha(frente, Color(1, 1, 1), 7.0)
+	_lote_aro.desenhar(no)
+
+
+## Reflexo claro em cima do aro (não muda de cor).
+func _desenhar_aro_brilho(no: Node2D) -> void:
+	if _lote_aro_brilho.indices.size() == 0:
+		_lote_aro_brilho.preparar(no)
+		_lote_aro_brilho.linha(_elipse(0, -1.5, raio_x, raio_y, 0.15, PI - 0.15, 24), Color(1, 0.95, 0.8, 0.8), 2.0)
+	_lote_aro_brilho.desenhar(no)
+
+
+## Ondas de choque: só redesenham enquanto existem.
+func _desenhar_ondas(no: Node2D) -> void:
+	if _ondas.empty():
+		return
+	var lote = _lote_ondas
+	lote.preparar(no)
 	for o in _ondas:
 		var k: float = o.t / 0.6
 		var cor_o: Color = o.cor
 		cor_o.a = (1.0 - k) * 0.9
-		var anel := _elipse(0, 0, raio_x * (1.0 + k * 1.6), raio_y * (1.0 + k * 1.6), 0, TAU, 48)
+		var anel := _elipse(0, 0, raio_x * (1.0 + k * 1.6), raio_y * (1.0 + k * 1.6), 0, TAU, 40)
 		anel.remove(anel.size() - 1)
 		lote.linha(anel, cor_o, 5.0 * (1.0 - k) + 1.0, true)
-	lote.desenhar(_frente)
+	lote.desenhar(no)

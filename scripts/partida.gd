@@ -220,7 +220,7 @@ func _criar_chamas_da_tela() -> CPUParticles2D:
 	aditivo.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 	p.material = aditivo
 	p.texture = load("res://imagens/brilho.png")
-	p.amount = 70
+	p.amount = 40
 	p.lifetime = 1.1
 	p.position = Vector2(640, 740)
 	p.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
@@ -230,7 +230,7 @@ func _criar_chamas_da_tela() -> CPUParticles2D:
 	p.gravity = Vector2(0, -120)
 	p.initial_velocity = 170
 	p.initial_velocity_random = 0.5
-	p.scale_amount = 0.65
+	p.scale_amount = 0.45
 	p.scale_amount_random = 0.6
 	var rampa := Gradient.new()
 	rampa.set_color(0, Color(1, 0.9, 0.4, 0.8))
@@ -297,6 +297,7 @@ func _numero_grande(texto: String, cor: Color) -> void:
 
 ## Faixa grande no meio da tela: título + subtítulo, entra e sai animada.
 func _banner(titulo: String, sub: String, cor: Color, dur: float) -> void:
+	_tirar_aviso()
 	var faixa := ColorRect.new()
 	faixa.color = Color(cor.r * 0.35, cor.g * 0.35, cor.b * 0.35, 0.92)
 	UI.colocar(faixa, 0, 250, 1280, 220)
@@ -309,10 +310,10 @@ func _banner(titulo: String, sub: String, cor: Color, dur: float) -> void:
 	borda2.color = cor
 	UI.colocar(borda2, 0, 215, 1280, 5)
 	faixa.add_child(borda2)
-	var lt := UI.label(titulo, f_titulo_grande, Jogo.BRANCO)
+	var lt := UI.label(titulo, UI.fonte_que_cabe("titan", 120, 8, titulo, 1180), Jogo.BRANCO)
 	UI.colocar(lt, 0, 10, 1280, 140)
 	faixa.add_child(lt)
-	var ls := UI.label(sub, f_sub, cor.lightened(0.5))
+	var ls := UI.label(sub, UI.fonte_que_cabe("bungee", 30, 3, sub, 1180), cor.lightened(0.5))
 	UI.colocar(ls, 0, 150, 1280, 50)
 	faixa.add_child(ls)
 	var tw := Tween.new()
@@ -331,11 +332,23 @@ func _banner(titulo: String, sub: String, cor: Color, dur: float) -> void:
 # ================================================================== CESTA
 func _input(ev: InputEvent) -> void:
 	if ev.is_action_pressed("input_pointer") and not ev.is_echo():
-		_sensor()
+		if estado == RESULTADO:
+			# no resultado, uma cesta joga de novo (depois de 3 s: a bola
+			# que ainda caía no fim do tempo não reinicia sem querer)
+			if _pode_reiniciar and _tempo_resultado <= 14.0 - 3.0:
+				_jogar_de_novo()
+		else:
+			_sensor()
 	elif ev.is_action_pressed("input_start") and not ev.is_echo():
 		if estado == RESULTADO and _pode_reiniciar:
-			Jogo.tocar("selecao")
-			Jogo.ir_para("res://cenas/partida.tscn")
+			_jogar_de_novo()
+
+
+func _jogar_de_novo() -> void:
+	if Jogo.trocando():
+		return
+	Jogo.tocar("selecao")
+	Jogo.ir_para("res://cenas/partida.tscn")
 
 
 func _sensor() -> void:
@@ -378,8 +391,9 @@ func _cesta() -> void:
 	cesta.anotar(cor)
 	fundo.flash(cor, 0.22 if combo < 3 else 0.35)
 	_tremor = 6.0 if fogo_restante > 0.0 else 3.0
-	# o "+2" sai do aro e voa até o placar
-	UI.flutuar(camada_fx, "+%d" % valor_cesta, f_flutua, cor.lightened(0.3), RIM + Vector2(0, -60), CENTRO_PLACAR + Vector2(0, 20), 0.85)
+	# o "+2" sobe do aro e some dentro da tabela: não cruza os avisos nem o
+	# placar (texto nenhum em cima de outro)
+	UI.flutuar(camada_fx, "+%d" % valor_cesta, f_flutua, cor.lightened(0.3), RIM + Vector2(0, -40), RIM + Vector2(0, -105), 0.8)
 
 	Jogo.tocar("swish", 0.0, rand_range(0.95, 1.05))
 	if combo >= 2:
@@ -391,7 +405,7 @@ func _cesta() -> void:
 		else:
 			UI.pulsar(chip_combo, 0.25)
 		if combo in [3, 5, 8, 10, 15, 20]:
-			UI.flutuar(camada_fx, _frase_combo(combo), Jogo.fonte("titan", 64, 5), Jogo.CIANO, Vector2(640, 420), Vector2(640, 330), 1.1)
+			_aviso(_frase_combo(combo), Jogo.CIANO, 1.1)
 	else:
 		Jogo.tocar("ponto", -4.0)
 	Leds.enviar("HIT")
@@ -402,9 +416,38 @@ func _cesta() -> void:
 	if not meta_batida and pontos_fase >= fases[fase].meta:
 		meta_batida = true
 		Jogo.tocar("fase")
-		UI.flutuar(camada_fx, "META BATIDA!", f_titulo, Jogo.VERDE, Vector2(640, 430), Vector2(640, 380), 1.6)
+		_aviso("META BATIDA!", Jogo.VERDE, 1.6)
 		fundo.flash(Jogo.VERDE, 0.45)
 		UI.cor_painel(painel_fase, Jogo.VERDE)
+
+
+## AVISOS GRANDES (EM CHAMAS, combo, meta, últimos segundos): sempre no
+## MESMO lugar (parte de cima da tabela, abaixo dos selos) e um de cada vez:
+## o novo tira o anterior na hora, então nunca ficam um em cima do outro.
+var _aviso_atual: Label
+
+
+func _aviso(texto: String, cor: Color, dur: float, grande := false) -> void:
+	if _aviso_atual != null and is_instance_valid(_aviso_atual):
+		_aviso_atual.queue_free()
+	var f := UI.fonte_que_cabe("titan", 88 if grande else 72, 6, texto, 960)
+	var l := UI.label(texto, f, cor)
+	UI.colocar(l, 160, 332, 960, 106)
+	camada_fx.add_child(l)
+	_aviso_atual = l
+	var tw := Tween.new()
+	l.add_child(tw)
+	tw.interpolate_property(l, "rect_scale", Vector2(0.3, 0.3), Vector2(1.08, 1.08), 0.2, Tween.TRANS_BACK, Tween.EASE_OUT)
+	tw.interpolate_property(l, "rect_scale", Vector2(1.08, 1.08), Vector2.ONE, 0.15, Tween.TRANS_SINE, Tween.EASE_OUT, 0.2)
+	tw.interpolate_property(l, "modulate:a", 1.0, 0.0, 0.25, Tween.TRANS_SINE, Tween.EASE_IN, dur - 0.25)
+	tw.interpolate_callback(l, dur, "queue_free")
+	tw.start()
+
+
+func _tirar_aviso() -> void:
+	if _aviso_atual != null and is_instance_valid(_aviso_atual):
+		_aviso_atual.queue_free()
+	_aviso_atual = null
 
 
 func _frase_combo(n: int) -> String:
@@ -426,7 +469,7 @@ func _entrar_fogo() -> void:
 	UI.cor_painel(painel_placar, Jogo.VERMELHO)
 	chip_fogo.visible = true
 	UI.pop(chip_fogo)
-	UI.flutuar(camada_fx, "EM CHAMAS!", f_titulo_grande, Color(1, 0.55, 0.1), Vector2(640, 420), Vector2(640, 360), 1.5)
+	_aviso("EM CHAMAS!", Color(1, 0.55, 0.1), 1.5, true)
 
 
 func _sair_fogo() -> void:
@@ -478,7 +521,7 @@ func _process(delta: float) -> void:
 		chip_sprint.text = "CESTA VALE %d" % int(Jogo.valor("pontos_sprint"))
 		chip_sprint.visible = true
 		UI.pop(chip_sprint)
-		UI.flutuar(camada_fx, "ÚLTIMOS %d s!" % int(Jogo.valor("segundos_sprint")), f_titulo, Jogo.AMARELO, Vector2(640, 430), Vector2(640, 380), 1.4)
+		_aviso("ÚLTIMOS %d s!" % int(Jogo.valor("segundos_sprint")), Jogo.AMARELO, 1.4)
 		fundo.flash(Jogo.AMARELO, 0.35)
 		UI.cor_painel(painel_tempo, Jogo.VERMELHO)
 	if tempo <= 0.0:
@@ -517,6 +560,7 @@ func _fim_da_fase() -> void:
 # ================================================================ RESULTADO
 func _mostrar_resultado(campeao: bool) -> void:
 	estado = RESULTADO
+	_tirar_aviso()
 	_tempo_resultado = 14.0
 	_posicao_ranking = Jogo.registrar_partida(pontos, fase + 1, cestas)
 	_novo_recorde = _posicao_ranking == 1
@@ -535,6 +579,7 @@ func _mostrar_resultado(campeao: bool) -> void:
 
 	var cor := Jogo.AMARELO if (_novo_recorde or campeao) else Jogo.LARANJA
 	var p := UI.painel(cor, Color(0.05, 0.02, 0.12, 0.95), 26, 4, 30)
+	p.name = "Resultado"
 	UI.colocar(p, 190, 60, 900, 600)
 	camada_topo.add_child(p)
 	UI.pop(p, 0.15, 0.5)
@@ -580,7 +625,7 @@ func _mostrar_resultado(campeao: bool) -> void:
 	p.add_child(lr)
 	UI.pop(lr, 1.4, 0.4)
 
-	var lj := UI.label("APERTE START PARA JOGAR DE NOVO", f_painel, Jogo.AMARELO)
+	var lj := UI.label("ACERTE A CESTA PARA JOGAR DE NOVO", f_painel, Jogo.AMARELO)
 	lj.name = "Chamada"
 	UI.colocar(lj, 0, 520, 900, 34)
 	p.add_child(lj)
@@ -620,11 +665,15 @@ func _festa_recorde() -> void:
 	confete.hue_variation_random = 1.0
 	confete.color = Color(1, 0.3, 0.3)
 	camada_topo.add_child(confete)
+	# atrás do painel: o confete não passa por cima dos textos
+	var painel_res := camada_topo.get_node_or_null("Resultado")
+	if painel_res != null:
+		camada_topo.move_child(confete, painel_res.get_index())
 
 
 func _processar_resultado(delta: float) -> void:
 	_tempo_resultado -= delta
-	var p := camada_topo.get_child(1) if camada_topo.get_child_count() > 1 else null
+	var p := camada_topo.get_node_or_null("Resultado")
 	if p != null:
 		var chamada: Label = p.get_node_or_null("Chamada")
 		if chamada != null:

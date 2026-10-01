@@ -20,11 +20,21 @@ export var cores := [Color(1.0, 0.48, 0.10), Color(0.55, 0.24, 1.0), Color(1.0, 
 var _feixes := []
 var _t := 0.0
 var _flash: ColorRect
-var _escuro: ColorRect
 var _faiscas: CPUParticles2D
 var intensidade := 1.0 setget definir_intensidade   # 1 normal; mais alto = EM CHAMAS
 var _material: ShaderMaterial
 var _fachos := []
+var _vel := 1.0
+var _fase_onda := 0.0
+var _fase_lampada := 0.0
+var _letreiro: Node2D
+
+# LEVE PARA A TV BOX: feixes e fachos são malhas com a cor nos vértices,
+# desenhadas UMA vez (depois só giram/mudam de cor pelo nó). Só cobrem a
+# área da luz: os retângulos de imagem de antes pintavam muito pixel
+# transparente. As camadas de tela cheia (escurecer e clarão) só existem
+# quando estão aparecendo.
+const Malha = preload("res://scripts/malha_luz.gd")
 
 
 func _ready() -> void:
@@ -41,25 +51,29 @@ func _ready() -> void:
 	if mascara != "":
 		_material = ShaderMaterial.new()
 		_material.shader = load("res://shaders/luzes_arena.shader")
-		_material.set_shader_param("mascara", load(mascara))
+		_material.set_shader_param("mascara", load(_versao_para_tela(mascara)))
 		fundo.material = _material
 	add_child(fundo)
+	if mascara != "":
+		# o letreiro de LED da faixa atrás da tabela, correndo
+		_letreiro = preload("res://scripts/letreiro_led.gd").new()
+		add_child(_letreiro)
 
-	_escuro = ColorRect.new()
-	_escuro.color = Color(0, 0, 0, escurecer)
-	_escuro.anchor_right = 1
-	_escuro.anchor_bottom = 1
-	_escuro.mouse_filter = MOUSE_FILTER_IGNORE
-	add_child(_escuro)
+	if escurecer > 0.001:
+		var escuro := ColorRect.new()
+		escuro.color = Color(0, 0, 0, escurecer)
+		escuro.anchor_right = 1
+		escuro.anchor_bottom = 1
+		escuro.mouse_filter = MOUSE_FILTER_IGNORE
+		add_child(escuro)
 
 	var aditivo := CanvasItemMaterial.new()
 	aditivo.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-	var tex_brilho: Texture = load("res://imagens/brilho.png")
 	for i in range(qtd_feixes):
-		var s := Sprite.new()
-		s.texture = tex_brilho
+		var s = Malha.new()
+		s.forma = Malha.FEIXE
 		s.material = aditivo
-		s.scale = Vector2(7.0, 0.45 + randf() * 0.4)
+		s.scale = Vector2(1.0, 0.45 + randf() * 0.4)
 		s.rotation_degrees = -28 + randf() * 12
 		var c: Color = cores[i % cores.size()]
 		s.modulate = Color(c.r, c.g, c.b, 0.0)
@@ -67,15 +81,11 @@ func _ready() -> void:
 		_feixes.append({"no": s, "fase": randf() * TAU, "vel": 0.12 + randf() * 0.10,
 			"y": 0.15 + 0.7 * float(i) / max(1, qtd_feixes - 1), "cor": c})
 
-	var tex_facho: Texture = load("res://imagens/feixe.png")
 	var cores_facho := [Color(1.0, 0.92, 0.75), Color(0.65, 0.4, 1.0), Color(1.0, 0.6, 0.25), Color(1.0, 0.92, 0.75)]
 	for i in range(holofotes.size()):
-		var f := Sprite.new()
-		f.texture = tex_facho
-		f.centered = false
-		f.offset = Vector2(-tex_facho.get_width() / 2.0, 0)
+		var f = Malha.new()
+		f.forma = Malha.FACHO
 		f.position = holofotes[i]
-		f.scale = Vector2(1.5, 1.3)
 		f.material = aditivo
 		add_child(f)
 		_fachos.append({"no": f, "fase": randf() * TAU, "cor": cores_facho[i % cores_facho.size()]})
@@ -108,6 +118,7 @@ func _ready() -> void:
 	_flash.mouse_filter = MOUSE_FILTER_IGNORE
 	_flash.material = aditivo
 	_flash.color = Color(0, 0, 0, 0)
+	_flash.visible = false
 	add_child(_flash)
 	_posicionar()
 	connect("resized", self, "_posicionar")
@@ -117,40 +128,60 @@ func _ready() -> void:
 ## da arte já reduzida com filtro bom. Reduzir a de 1920 na placa de vídeo,
 ## sem mipmap, deixa as linhas finas e as lâmpadas serrilhadas.
 func _imagem_para_tela() -> String:
+	return _versao_para_tela(imagem)
+
+
+## O mesmo para a máscara das luzes (lâmpadas lisas em qualquer tela).
+func _versao_para_tela(arq: String) -> String:
 	if OS.window_size.y < 900:
-		var menor := imagem.replace(".png", "_720.png")
+		var menor := arq.replace(".png", "_720.png")
 		if ResourceLoader.exists(menor):
 			return menor
-	return imagem
+	return arq
 
 
 func _posicionar() -> void:
 	_faiscas.position = Vector2(rect_size.x / 2, rect_size.y + 10)
 	_faiscas.emission_rect_extents = Vector2(rect_size.x / 2, 10)
+	if _letreiro != null:
+		# a arte cobre a tela (pode sobrar dos lados): o letreiro acompanha
+		var k: float = max(rect_size.x / 1920.0, rect_size.y / 1080.0)
+		_letreiro.scale = Vector2(k, k)
+		_letreiro.position = (rect_size - Vector2(1920, 1080) * k) / 2.0
 
 
 func _process(delta: float) -> void:
 	_t += delta
 	var larg := rect_size.x
 	for f in _feixes:
-		var s: Sprite = f.no
+		var s: Node2D = f.no
 		var ciclo: float = fmod(_t * f.vel + f.fase / TAU, 1.0)
 		s.position = Vector2(lerp(-larg * 0.3, larg * 1.3, ciclo), rect_size.y * f.y)
-		var a := sin(ciclo * PI) * 0.22 * intensidade
 		var c: Color = f.cor
-		s.modulate = Color(c.r, c.g, c.b, a)
+		s.modulate = Color(c.r, c.g, c.b, sin(ciclo * PI) * 0.22 * intensidade)
 	for f in _fachos:
-		var sp: Sprite = f.no
+		var sp: Node2D = f.no
 		sp.rotation = sin(_t * 0.45 + f.fase) * 0.26
 		var c: Color = f.cor
 		sp.modulate = Color(c.r, c.g, c.b, (0.16 + 0.06 * sin(_t * 1.3 + f.fase)) * min(intensidade, 1.8))
-	if _flash.color.a > 0.0:
+	if _flash.visible:
 		_flash.color.a = max(0.0, _flash.color.a - delta * 2.2)
+		if _flash.color.a <= 0.0:
+			_flash.visible = false
+	if _material != null:
+		# Fases calculadas aqui e dadas "dando a volta": a GPU da TV Box faz
+		# a conta do shader com pouca precisão, e com o TIME crescendo a
+		# animação das luzes travaria depois de algum tempo ligada.
+		_fase_onda = fmod(_fase_onda + delta * 3.5 * _vel, TAU)
+		_fase_lampada = fmod(_fase_lampada + delta * 1.6 * _vel, 1.0)
+		_material.set_shader_param("fase_onda", _fase_onda)
+		_material.set_shader_param("fase_lampada", _fase_lampada)
 
 
 ## Clarão de cor na tela inteira (cesta, combo, recorde).
 func flash(cor: Color, forca: float = 0.35) -> void:
 	_flash.color = Color(cor.r * forca, cor.g * forca, cor.b * forca, 1.0)
+	_flash.visible = true
 
 
 func definir_faiscas(qtd: int, cor_rapida := false) -> void:
@@ -162,7 +193,9 @@ func definir_intensidade(v: float) -> void:
 	intensidade = v
 	if _material != null:
 		var fogo := v > 1.5
-		_material.set_shader_param("velocidade", 2.4 if fogo else 1.0)
+		_vel = 2.4 if fogo else 1.0
+		if _letreiro != null:
+			_letreiro.velocidade = 48.0 if fogo else 24.0
 		_material.set_shader_param("intensidade", 1.35 if fogo else 1.0)
 		_material.set_shader_param("cor_neon", Color(1.0, 0.32, 0.08) if fogo else Color(1.0, 0.78, 0.22))
 		_material.set_shader_param("cor_lampada", Color(1.0, 0.45, 0.2) if fogo else Color(1.0, 0.86, 0.45))

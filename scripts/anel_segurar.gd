@@ -14,8 +14,15 @@ func _ready() -> void:
 	_fonte = Jogo.fonte("bungee", 20, 2)
 
 
+var _passo := -1
+
+
 func _process(_delta: float) -> void:
-	update()
+	# só redesenha quando o anel anda um passo visível
+	var passo := int(clamp(progresso, 0.0, 1.0) * 200)
+	if passo != _passo:
+		_passo = passo
+		update()
 
 
 func _draw() -> void:
