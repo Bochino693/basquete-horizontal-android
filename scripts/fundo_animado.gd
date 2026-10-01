@@ -27,6 +27,7 @@ var _fachos := []
 var _vel := 1.0
 var _fase_onda := 0.0
 var _fase_lampada := 0.0
+var _letreiro: Node2D
 
 # LEVE PARA A TV BOX: feixes e fachos são malhas com a cor nos vértices,
 # desenhadas UMA vez (depois só giram/mudam de cor pelo nó). Só cobrem a
@@ -50,9 +51,13 @@ func _ready() -> void:
 	if mascara != "":
 		_material = ShaderMaterial.new()
 		_material.shader = load("res://shaders/luzes_arena.shader")
-		_material.set_shader_param("mascara", load(mascara))
+		_material.set_shader_param("mascara", load(_versao_para_tela(mascara)))
 		fundo.material = _material
 	add_child(fundo)
+	if mascara != "":
+		# o letreiro de LED da faixa atrás da tabela, correndo
+		_letreiro = preload("res://scripts/letreiro_led.gd").new()
+		add_child(_letreiro)
 
 	if escurecer > 0.001:
 		var escuro := ColorRect.new()
@@ -123,16 +128,26 @@ func _ready() -> void:
 ## da arte já reduzida com filtro bom. Reduzir a de 1920 na placa de vídeo,
 ## sem mipmap, deixa as linhas finas e as lâmpadas serrilhadas.
 func _imagem_para_tela() -> String:
+	return _versao_para_tela(imagem)
+
+
+## O mesmo para a máscara das luzes (lâmpadas lisas em qualquer tela).
+func _versao_para_tela(arq: String) -> String:
 	if OS.window_size.y < 900:
-		var menor := imagem.replace(".png", "_720.png")
+		var menor := arq.replace(".png", "_720.png")
 		if ResourceLoader.exists(menor):
 			return menor
-	return imagem
+	return arq
 
 
 func _posicionar() -> void:
 	_faiscas.position = Vector2(rect_size.x / 2, rect_size.y + 10)
 	_faiscas.emission_rect_extents = Vector2(rect_size.x / 2, 10)
+	if _letreiro != null:
+		# a arte cobre a tela (pode sobrar dos lados): o letreiro acompanha
+		var k: float = max(rect_size.x / 1920.0, rect_size.y / 1080.0)
+		_letreiro.scale = Vector2(k, k)
+		_letreiro.position = (rect_size - Vector2(1920, 1080) * k) / 2.0
 
 
 func _process(delta: float) -> void:
@@ -179,6 +194,8 @@ func definir_intensidade(v: float) -> void:
 	if _material != null:
 		var fogo := v > 1.5
 		_vel = 2.4 if fogo else 1.0
+		if _letreiro != null:
+			_letreiro.velocidade = 48.0 if fogo else 24.0
 		_material.set_shader_param("intensidade", 1.35 if fogo else 1.0)
 		_material.set_shader_param("cor_neon", Color(1.0, 0.32, 0.08) if fogo else Color(1.0, 0.78, 0.22))
 		_material.set_shader_param("cor_lampada", Color(1.0, 0.45, 0.2) if fogo else Color(1.0, 0.86, 0.45))

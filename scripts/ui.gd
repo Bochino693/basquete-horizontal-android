@@ -14,6 +14,22 @@ static func label(texto: String, fonte: Font, cor: Color, alinhar := Label.ALIGN
 	return l
 
 
+## A maior fonte (até "tamanho") em que o texto cabe na largura dada: nada de
+## texto passando da caixa e encostando no vizinho.
+static func fonte_que_cabe(nome: String, tamanho: int, contorno: int, texto: String, largura: float) -> Font:
+	var t := tamanho
+	var f: Font = Jogo.fonte(nome, t, contorno)
+	while t > 12:
+		var maior := 0.0
+		for linha in texto.split("\n"):
+			maior = max(maior, f.get_string_size(linha).x)
+		if maior + contorno * 2 <= largura:
+			break
+		t -= 2
+		f = Jogo.fonte(nome, t, contorno)
+	return f
+
+
 ## Painel neon: fundo escuro translúcido, borda colorida e brilho em volta.
 static func painel(cor: Color, fundo := Color(0.04, 0.02, 0.10, 0.82), raio := 18, borda := 3, brilho := 18) -> Panel:
 	var p := Panel.new()

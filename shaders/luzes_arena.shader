@@ -21,9 +21,12 @@ void fragment() {
 	if (m.r + m.g > 0.01) {
 		float onda = 0.5 + 0.5 * sin(fract(UV.x * 5.0 + UV.y * 3.0) * 6.2832 - fase_onda);
 		vec3 luz = cor_neon.rgb * m.r * (0.15 + 0.85 * onda * onda * onda) * 0.6 * intensidade;
+		// a lâmpada acende e apaga com uma rampa curta (sem "piscar seco")
 		float seq = fract(m.b * lampadas / 3.0 - fase_lampada);
-		float acesa = step(0.62, seq);
-		luz += cor_lampada.rgb * m.g * (0.12 + 1.3 * acesa) * intensidade;
+		float acesa = smoothstep(0.56, 0.66, seq) * (1.0 - smoothstep(0.92, 1.0, seq));
+		luz += cor_lampada.rgb * m.g * (0.1 + 1.25 * acesa) * intensidade;
+		// miolo quase branco quando acesa (vidro estourado de luz)
+		luz += vec3(1.0, 0.95, 0.85) * smoothstep(0.75, 1.0, m.g) * acesa * 0.55 * intensidade;
 		COLOR.rgb = tex.rgb + luz;
 	}
 }

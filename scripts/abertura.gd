@@ -3,9 +3,10 @@ extends Control
 const UI = preload("res://scripts/ui.gd")
 
 ## ABERTURA (tela de espera): a arte SWISH ARENA viva, bola voando para a
-## cesta de tempos em tempos, APERTE START pulsando, recorde em LED e um
+## cesta de tempos em tempos, ACERTE A CESTA pulsando, recorde em LED e um
 ## painel que gira entre o RANKING e o COMO JOGAR.
-## START começa a partida. Segurar SELECT (ou F10 no PC) abre a configuração.
+## A PRIMEIRA CESTA (sensor) começa a partida; START também (operador).
+## Segurar SELECT (ou F10 no PC) abre a configuração.
 
 const CESTA_ARTE := Vector2(1132, 160)   # onde fica o aro na arte de abertura
 const SEGURAR_CONFIG := 4.0
@@ -17,7 +18,6 @@ var _painel: Panel
 var _painel_modo := 0
 var _proxima_troca := 7.0
 var _chamada: Label
-var _sub: Label
 var _varredura: Sprite
 var _halo: Sprite
 var _segurando := 0.0
@@ -94,15 +94,13 @@ func _ready() -> void:
 	add_child(logo)
 	UI.pop(logo, 0.5)
 
-	# APERTE START
-	_chamada = UI.label("APERTE START", Jogo.fonte("titan", 76, 7), Jogo.LARANJA)
-	UI.colocar(_chamada, 60, 560, 760, 96)
+	# ACERTE PARA COMEÇAR A JOGAR: a primeira bola na cesta começa o jogo
+	# (grande, em duas linhas, sem nada embaixo)
+	var chamada := "ACERTE PARA\nCOMEÇAR A JOGAR"
+	_chamada = UI.label(chamada, UI.fonte_que_cabe("titan", 84, 7, chamada, 760), Jogo.LARANJA)
+	UI.colocar(_chamada, 40, 528, 800, 184)
 	add_child(_chamada)
-	_sub = UI.label("JOGUE E ENTRE PARA O RANKING!", Jogo.fonte("bungee", 24, 3), Jogo.CIANO)
-	UI.colocar(_sub, 60, 652, 760, 40)
-	add_child(_sub)
 	UI.pop(_chamada, 0.6, 0.6)
-	UI.deslizar(_sub, Vector2(0, 80), 0.8)
 
 	# painel ranking / como jogar
 	_painel = UI.painel(Jogo.ROXO, Color(0.05, 0.02, 0.12, 0.85), 22, 3, 22)
@@ -177,9 +175,8 @@ func _process(delta: float) -> void:
 	_t += delta
 	# chamada pulsando e trocando de cor
 	var k := abs(sin(_t * 2.6))
-	_chamada.rect_scale = Vector2.ONE * (1.0 + k * 0.06)
+	_chamada.rect_scale = Vector2.ONE * (1.0 + k * 0.05)
 	_chamada.add_color_override("font_color", Jogo.LARANJA.linear_interpolate(Jogo.AMARELO, k))
-	_sub.modulate.a = 0.6 + k * 0.4
 	# halo da cesta da arte
 	_halo.modulate = Color(1.0, 0.45, 0.1, 0.18 + abs(sin(_t * 1.7)) * 0.2)
 	# brilho passando pelo logo a cada 5 s
@@ -265,13 +262,24 @@ func _arco(k: float) -> void:
 func _cesta_demo() -> void:
 	_explosao.restart()
 	fundo.flash(Jogo.LARANJA, 0.18)
-	UI.flutuar(self, "SWISH!", Jogo.fonte("titan", 48, 4), Jogo.AMARELO, CESTA_ARTE + Vector2(-40, 120), CESTA_ARTE + Vector2(-60, 60), 1.0)
+	# à esquerda do aro, acima do painel (não cobre o título do painel)
+	UI.flutuar(self, "SWISH!", Jogo.fonte("titan", 44, 4), Jogo.AMARELO, CESTA_ARTE + Vector2(-190, 40), CESTA_ARTE + Vector2(-200, -10), 1.0)
 
 
 func _input(ev: InputEvent) -> void:
 	if _saindo:
 		return
-	if ev.is_action_pressed("input_start") and not ev.is_echo():
+	if ev.is_action_pressed("input_pointer") and not ev.is_echo():
+		# a bola caiu na cesta: festa e começa
+		Jogo.tocar("swish")
+		Jogo.tocar("selecao", -4.0)
+		_explosao.restart()
+		fundo.flash(Jogo.LARANJA, 0.55)
+		_chamada.text = "VAMOS JOGAR!"
+		UI.pulsar(_chamada, 0.35)
+		_saindo = true
+		get_tree().create_timer(0.7).connect("timeout", self, "_ir", ["res://cenas/partida.tscn"])
+	elif ev.is_action_pressed("input_start") and not ev.is_echo():
 		Jogo.tocar("selecao")
 		fundo.flash(Jogo.AMARELO, 0.5)
 		UI.pulsar(_chamada, 0.3)
@@ -282,6 +290,7 @@ func _input(ev: InputEvent) -> void:
 
 func _ir(cena: String) -> void:
 	_saindo = true
+	set_process_input(false)
 	if cena.ends_with("partida.tscn"):
 		Jogo.parar_musica(0.3)
 	Jogo.ir_para(cena)

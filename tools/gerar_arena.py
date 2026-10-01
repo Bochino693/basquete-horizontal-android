@@ -3,7 +3,7 @@
     python3 tools/gerar_arena.py
 
 imagens/fundo_arena.png          1920x1080, a arena parada (nitida na TV Full HD)
-imagens/fundo_arena_mascara.png  960x540, onde tem luz animada (o shader le):
+imagens/fundo_arena_mascara.png  1920x1080 (e _720), onde tem luz animada (o shader le):
     R = tubos de neon (a luz corre por eles)
     G = lampadas de fliperama (acendem em sequencia, como marquise)
     B = fase de cada lampada (ordem da sequencia)
@@ -126,34 +126,72 @@ FONTE_5X7 = {
     "U": ["10001", "10001", "10001", "10001", "10001", "10001", "01110"],
     "G": ["01110", "10001", "10000", "10111", "10001", "10001", "01111"],
     "M": ["10001", "11011", "10101", "10101", "10001", "10001", "10001"],
+    "L": ["10000", "10000", "10000", "10000", "10000", "10000", "11111"],
+    "Z": ["11111", "00001", "00010", "00100", "01000", "10000", "11111"],
+    "P": ["11110", "10001", "10001", "11110", "10000", "10000", "10000"],
+    "T": ["11111", "00100", "00100", "00100", "00100", "00100", "00100"],
+    "&": ["01100", "10010", "10100", "01000", "10101", "10010", "01101"],
     "*": ["00000", "00000", "01110", "01110", "01110", "00000", "00000"],
     " ": ["00000"] * 7,
 }
 PASSO = 6                                   # distancia entre LEDs (px)
-txt = "SWISH ARENA  *  SHOW YOUR GAME  *  " * 6
-colunas = []                                # lista de (coluna de 7 bits, indice da frase)
-frase = 0
-for ch in txt:
-    if ch == "*":
-        frase += 1
-    for c in range(5):
-        colunas.append(([FONTE_5X7[ch][r][c] == "1" for r in range(7)], frase))
-    colunas.append(([False] * 7, frase))
 topo_rib = RIB_Y0 + (RIB_Y1 - RIB_Y0 - 6 * PASSO) / 2.0
-def ribbon_leds(d):
-    for i, (col, fr) in enumerate(colunas):
-        x = 6 + i * PASSO
-        if x > W:
-            break
-        c = (255, 160, 40, 255) if fr % 2 == 0 else (200, 120, 255, 255)
+# O LETREIRO ANDA: as frases sao desenhadas numa faixa propria (imagens/
+# letreiro.png, e a _720) que o jogo faz correr LED a LED, sumindo atras da
+# tabela de vidro (scripts/letreiro_led.gd). Na arte fica so a faixa escura.
+FRASES = [("SWISH ARENA", (255, 160, 40)), ("SHOW YOUR GAME", (200, 120, 255)),
+          ("LAZER & SPORT GAMES", (40, 220, 255))]
+colunas = []                                # (7 bits, cor)
+for txt, c in FRASES:
+    for ch in txt:
+        for k in range(5):
+            colunas.append(([FONTE_5X7[ch][r][k] == "1" for r in range(7)], c))
+        colunas.append(([False] * 7, c))
+    for _ in range(4):
+        colunas.append(([False] * 7, c))
+    for k in range(5):                      # estrelinha entre as frases
+        colunas.append(([FONTE_5X7["*"][r][k] == "1" for r in range(7)], (255, 230, 150)))
+    for _ in range(5):
+        colunas.append(([False] * 7, c))
+print("letreiro: colunas", len(colunas))
+
+
+def letreiro(passo, nome):
+    """Faixa de LEDs (todas as colunas lado a lado, emenda sem costura)."""
+    k = passo / 6.0
+    lw, lh = len(colunas) * int(passo), int(round(RIB_Y1 - RIB_Y0))
+    lh = int(round(lh * k))
+    g = 4                                   # desenha em 4x e reduz (liso)
+    acesos = Image.new("RGBA", (lw * g, lh * g), (0, 0, 0, 0))
+    apagados = Image.new("RGBA", (lw * g, lh * g), (0, 0, 0, 0))
+    da, dp = ImageDraw.Draw(acesos), ImageDraw.Draw(apagados)
+    y0 = (lh - 6 * passo) / 2.0
+    for i, (col, c) in enumerate(colunas):
+        x = (i + 0.5) * passo
         for r in range(7):
-            y = topo_rib + r * PASSO
+            y = y0 + r * passo
             if col[r]:
-                d.ellipse([x - 2.2, y - 2.2, x + 2.2, y + 2.2], fill=c)
+                rr = 2.2 * k * g
+                da.ellipse([x * g - rr, y * g - rr, x * g + rr, y * g + rr], fill=c + (255,))
             else:
-                d.ellipse([x - 1.2, y - 1.2, x + 1.2, y + 1.2], fill=(40, 26, 60, 255))
-img = somar(img, camada_blur(ribbon_leds, 2.5), 0.8)
-img = por_cima(img, camada_blur(ribbon_leds, 0))
+                rr = 1.2 * k * g
+                dp.ellipse([x * g - rr, y * g - rr, x * g + rr, y * g + rr], fill=(40, 26, 60, 255))
+    acesos = acesos.resize((lw, lh), Image.LANCZOS)
+    apagados = apagados.resize((lw, lh), Image.LANCZOS)
+    # brilho em volta dos LEDs acesos (a faixa da direita e da esquerda
+    # emendam: borra com a faixa repetida)
+    triplo = Image.new("RGBA", (lw * 3, lh), (0, 0, 0, 0))
+    for j in range(3):
+        triplo.paste(acesos, (j * lw, 0))
+    brilho = triplo.filter(ImageFilter.GaussianBlur(2.5 * k)).crop((lw, 0, lw * 2, lh))
+    out = Image.alpha_composite(apagados, brilho)
+    out = Image.alpha_composite(out, acesos)
+    out.save(os.path.join(IMG, nome), optimize=True)
+    print(nome, out.size)
+
+
+letreiro(6, "letreiro.png")
+letreiro(4, "letreiro_720.png")
 
 # ------------------------------------------------------------ quadra
 # Piso brilhante em perspectiva, com reflexo das luzes.
@@ -182,6 +220,9 @@ img = somar(img, camada_blur(linhas_quadra, 0), 0.7)
 espelho = img[max(0, 2 * piso_y - H):piso_y][::-1]
 alt = min(espelho.shape[0], H - piso_y)
 atenua = (0.14 * np.exp(-np.arange(alt) / 90.0))[:, None, None]
+# linha k do reflexo vem da linha piso_y - 1 - k: o letreiro nao reflete
+origem = piso_y - 1 - np.arange(alt)
+atenua = atenua * np.where((origem >= RIB_Y0 - 8) & (origem <= RIB_Y1 + 8), 0.0, 1.0)[:, None, None]
 img[piso_y:piso_y + alt] += espelho[:alt] * atenua
 
 # ------------------------------------------------------ holofotes do teto
@@ -252,10 +293,32 @@ for y in np.arange(430, H - 70, 52):
     lampadas.append((W - 46, y))
 for x in np.arange(120, W - 100, 58):
     lampadas.append((x, H - 44))
-def lamp_base(d):
-    for (x, y) in lampadas:
-        d.ellipse([x - 9, y - 9, x + 9, y + 9], fill=(90, 60, 20, 255))
-img = por_cima(img, camada_blur(lamp_base, 0.8))
+# bulbo apagado desenhado em 4x e reduzido (borda lisa em 1080p): aro
+# cromado, vidro ambar escuro com o filamento e o reflexo branco
+def bulbo(R=15):
+    g = R * 2 * 4 + 8
+    im = Image.new("RGBA", (g, g), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    c = g / 2
+    e = 4
+    d.ellipse([c - (R + 1) * e, c - (R + 1) * e, c + (R + 1) * e, c + (R + 1) * e], fill=(10, 8, 16, 230))
+    for k in range(12):                    # aro cromado (degrade)
+        rr = (R - k * 0.25) * e
+        t = k / 11
+        v = int(120 + 120 * (1 - abs(t - 0.35) * 1.6))
+        d.ellipse([c - rr, c - rr, c + rr, c + rr], fill=(v, v - 6, v - 18, 255))
+    rv = (R - 3.6) * e
+    d.ellipse([c - rv, c - rv, c + rv, c + rv], fill=(70, 40, 12, 255))
+    rv2 = (R - 5.5) * e
+    d.ellipse([c - rv2, c - rv2, c + rv2, c + rv2], fill=(120, 72, 22, 255))
+    d.arc([c - 3 * e, c - 2 * e, c + 3 * e, c + 4 * e], 200, 340, fill=(170, 110, 40, 255), width=e)
+    d.ellipse([c - 6.5 * e, c - 7 * e, c - 2.5 * e, c - 3.5 * e], fill=(255, 245, 220, 200))
+    return im.resize((g // 4, g // 4), Image.LANCZOS)
+BULBO = bulbo()
+camada_b = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+for (x, y) in lampadas:
+    camada_b.alpha_composite(BULBO, (int(round(x - BULBO.width / 2)), int(round(y - BULBO.height / 2))))
+img = por_cima(img, np.asarray(camada_b, np.float32) / 255.0)
 
 final = Image.fromarray((np.clip(img, 0, 1) * 255).astype(np.uint8), "RGB")
 final.save(os.path.join(IMG, "fundo_arena.png"), optimize=True)
@@ -266,9 +329,10 @@ final.resize((1280, 720), Image.LANCZOS).save(os.path.join(IMG, "fundo_arena_720
 print("fundo_arena_720.png", (1280, 720))
 
 # ------------------------------------------------------------ mascara
-MW, MH = W // 2, H // 2
+# Em resolucao cheia (antes 960x540: as lampadas viravam aneis serrilhados).
+MW, MH = W, H
 masc = np.zeros((MH, MW, 3), np.float32)
-esc = 0.5
+esc = 1.0
 def para_mascara(desenhar, raio):
     im = Image.new("L", (MW, MH), 0)
     desenhar(ImageDraw.Draw(im))
@@ -277,14 +341,14 @@ def para_mascara(desenhar, raio):
     return np.asarray(im, np.float32) / 255.0
 
 def tubos_m(d):
-    d.rounded_rectangle([margem * esc, margem * esc, (W - margem) * esc, (H - margem) * esc], radius=17, outline=255, width=9)
+    d.rounded_rectangle([margem * esc, margem * esc, (W - margem) * esc, (H - margem) * esc], radius=34, outline=255, width=18)
     for i in range(4):
         dx = i * 46
-        d.line([((60 + dx) * esc, (H - 40) * esc), ((300 + dx) * esc, 560 * esc)], fill=255, width=9)
-        d.line([((W - 60 - dx) * esc, (H - 40) * esc), ((W - 300 - dx) * esc, 560 * esc)], fill=255, width=9)
-    d.rounded_rectangle([c * esc for c in tab], radius=9, outline=160, width=8)
-    d.rectangle([c * esc for c in quad], outline=200, width=7)
-masc[..., 0] = para_mascara(tubos_m, 3)
+        d.line([((60 + dx) * esc, (H - 40) * esc), ((300 + dx) * esc, 560 * esc)], fill=255, width=18)
+        d.line([((W - 60 - dx) * esc, (H - 40) * esc), ((W - 300 - dx) * esc, 560 * esc)], fill=255, width=18)
+    d.rounded_rectangle([c * esc for c in tab], radius=18, outline=160, width=16)
+    d.rectangle([c * esc for c in quad], outline=200, width=14)
+masc[..., 0] = para_mascara(tubos_m, 6)
 rib = np.zeros((MH, MW), np.float32)
 rib[int(RIB_Y0 * esc):int(RIB_Y1 * esc) + 1, :] = 0.7
 masc[..., 0] = np.maximum(masc[..., 0], rib)
@@ -292,20 +356,34 @@ masc[..., 0] = np.maximum(masc[..., 0], rib)
 # lampadas: forma (G) e fase (B) = posicao exata na volta da moldura
 # (esquerda de cima p/ baixo, embaixo da esquerda p/ direita, direita de
 # baixo p/ cima): o shader acende 1 a cada 3 e a luz "roda" em volta.
+# G = vidro aceso (disco liso, desenhado em 4x) + halo em volta;
+# B = fase pintada num disco MAIOR que o halo: a lampada inteira (vidro e
+# halo) acende junta, sem anel na borda.
 esq = sorted([p for p in lampadas if p[0] < W * 0.1], key=lambda p: p[1])
 baixo_l = sorted([p for p in lampadas if W * 0.1 <= p[0] <= W * 0.9], key=lambda p: p[0])
 dir_ = sorted([p for p in lampadas if p[0] > W * 0.9], key=lambda p: -p[1])
 ordem_l = esq + baixo_l + dir_
 N = len(ordem_l)
 print("lampadas:", N)
-g = Image.new("L", (MW, MH), 0)
+g4 = Image.new("L", (MW * 2, MH * 2), 0)
 b = Image.new("L", (MW, MH), 0)
-dg, db = ImageDraw.Draw(g), ImageDraw.Draw(b)
+dg, db = ImageDraw.Draw(g4), ImageDraw.Draw(b)
 for i, (x, y) in enumerate(ordem_l):
-    r = 15 * esc
-    dg.ellipse([x * esc - r, y * esc - r, x * esc + r, y * esc + r], fill=255)
-    db.ellipse([x * esc - r, y * esc - r, x * esc + r, y * esc + r], fill=int(round(i / N * 255)))
-masc[..., 1] = np.asarray(g.filter(ImageFilter.GaussianBlur(2.2)), np.float32) / 255.0
+    r = 10.5 * 2
+    dg.ellipse([x * 2 - r, y * 2 - r, x * 2 + r, y * 2 + r], fill=255)
+    rb = 24
+    db.ellipse([x - rb, y - rb, x + rb, y + rb], fill=int(round((i + 0.5) / N * 255)))
+vidro = np.asarray(g4.resize((MW, MH), Image.LANCZOS), np.float32) / 255.0
+halo = np.asarray(g4.resize((MW, MH), Image.LANCZOS).filter(ImageFilter.GaussianBlur(8)), np.float32) / 255.0
+masc[..., 1] = np.clip(np.maximum(vidro, halo * 0.75), 0, 1)
 masc[..., 2] = np.asarray(b, np.float32) / 255.0
-Image.fromarray((masc * 255).astype(np.uint8), "RGB").save(os.path.join(IMG, "fundo_arena_mascara.png"), optimize=True)
+m8 = Image.fromarray((masc * 255 + 0.5).astype(np.uint8), "RGB")
+m8.save(os.path.join(IMG, "fundo_arena_mascara.png"), optimize=True)
 print("fundo_arena_mascara.png", (MW, MH))
+# versao 720p: G e R reduzidos com filtro; B pelo vizinho (a fase nao pode
+# misturar entre lampadas)
+m7 = Image.merge("RGB", (m8.getchannel(0).resize((1280, 720), Image.LANCZOS),
+                         m8.getchannel(1).resize((1280, 720), Image.LANCZOS),
+                         m8.getchannel(2).resize((1280, 720), Image.NEAREST)))
+m7.save(os.path.join(IMG, "fundo_arena_mascara_720.png"), optimize=True)
+print("fundo_arena_mascara_720.png", (1280, 720))

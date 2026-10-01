@@ -9,7 +9,8 @@ TV Box S905L (Android 7.1). O jogo antigo continua no branch main.
 
 1) COMO JOGAR
 -------------
-  - APERTE START na abertura. Contagem 3-2-1-VAI.
+  - ACERTE A CESTA na abertura: a primeira bola na cesta comeca o jogo
+    (START tambem comeca, para o operador). Contagem 3-2-1-VAI.
   - FASE 1 e FASE 2 tem uma META de pontos. Bateu a meta: passa de fase
     quando o tempo acabar. Nao bateu: fim de jogo.
   - FINAL: faca o maximo de pontos.
@@ -17,8 +18,12 @@ TV Box S905L (Android 7.1). O jogo antigo continua no branch main.
   - 4 cestas seguidas (menos de 3 s entre elas) = EM CHAMAS: pontos x2
     por 8 segundos (renova enquanto continuar acertando).
   - No fim: pontuacao, cestas, maior combo, posicao no ranking e recorde.
-    START joga de novo; sem nada, volta para a abertura sozinho.
+    Uma cesta (ou START) joga de novo; sem nada, volta para a abertura
+    sozinho.
   Tudo isso e ajustavel na CONFIGURACAO.
+  - Na arena: lampadas da moldura em alta definicao acendendo em sequencia
+    e o letreiro de LED correndo (SWISH ARENA, SHOW YOUR GAME, LAZER &
+    SPORT GAMES), passando por tras da tabela.
 
 
 2) BOTOES (ZERO DELAY, IGUAIS AO JOGO ANTIGO)
