@@ -28,7 +28,7 @@ var config := {
 	"pontos_cesta": 2,
 	"pontos_sprint": 3,
 	"segundos_sprint": 10,
-	"trava_sensor": 1.2,
+	"trava_sensor": 0.7,
 	"cestas_fogo": 4,
 	"janela_fogo": 3.0,
 	"duracao_fogo": 8.0,
@@ -95,12 +95,16 @@ func _carregar_config() -> void:
 		return
 	for k in config.keys():
 		config[k] = c.get_value("jogo", k, config[k])
+	# configuração salva antes da trava de 0,7 s: passa a usar 0,7 s
+	if int(c.get_value("jogo", "versao", 1)) < 2:
+		config.trava_sensor = 0.7
 
 
 func salvar_config() -> void:
 	var c := ConfigFile.new()
 	for k in config.keys():
 		c.set_value("jogo", k, config[k])
+	c.set_value("jogo", "versao", 2)
 	c.save(CAMINHO_CONFIG)
 	aplicar_volumes()
 

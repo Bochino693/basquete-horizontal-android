@@ -40,8 +40,9 @@ TV Box S905L (Android 7.1). O jogo antigo continua no branch main.
   - Tempo de cada fase, meta da fase 1 e 2.
   - Pontos por cesta e nos ultimos segundos.
   - TRAVA DO SENSOR: tempo minimo entre duas cestas (evita contar a mesma
-    bola duas vezes). Padrao 1,2 s como no jogo antigo. Se o sensor da sua
-    maquina da um sinal limpo por bola, diminua para jogadas rapidas.
+    bola duas vezes). Padrao 0,7 s. Alem disso a cesta so conta quando o
+    sensor ACIONA: sensor preso ou segurado nao faz ponto; ele precisa
+    soltar antes da proxima cesta.
   - Cestas seguidas para EM CHAMAS, volumes.
   - TESTE DO SENSOR: jogue uma bola e veja o contador de sinais.
   - TESTAR LEDS, ZERAR RANKING (pede START duas vezes), SALVAR E SAIR.
