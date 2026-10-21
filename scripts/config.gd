@@ -20,6 +20,7 @@ var itens := [
 	{"chave": "cestas_fogo", "nome": "CESTAS SEGUIDAS P/ EM CHAMAS", "opcoes": [3, 4, 5, 6, 8], "fmt": "%d"},
 	{"chave": "volume_musica", "nome": "VOLUME DA MÚSICA", "opcoes": [0, 20, 40, 60, 70, 80, 100], "fmt": "%d%%"},
 	{"chave": "volume_efeitos", "nome": "VOLUME DOS EFEITOS", "opcoes": [0, 20, 40, 60, 80, 100], "fmt": "%d%%"},
+	{"chave": "apresentacao", "nome": "APRESENTAÇÃO NA ESPERA", "opcoes": [1, 0], "nomes": ["NÃO", "SIM"]},
 	{"acao": "leds", "nome": "TESTAR LEDS"},
 	{"acao": "zerar", "nome": "ZERAR RANKING"},
 	{"acao": "sair", "nome": "SALVAR E SAIR"},
@@ -108,7 +109,7 @@ func _atualizar_valores() -> void:
 		var v: Label = _valores[i]
 		if it.has("chave"):
 			var x = Jogo.config[it.chave]
-			v.text = it.fmt % x
+			v.text = it.nomes[int(x)] if it.has("nomes") else it.fmt % x
 		elif it.acao == "zerar" and _confirmar_zerar and i == _sel:
 			v.text = "START DE NOVO!"
 		else:

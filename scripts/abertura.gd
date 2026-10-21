@@ -10,6 +10,8 @@ const UI = preload("res://scripts/ui.gd")
 
 const CESTA_ARTE := Vector2(1132, 160)   # onde fica o aro na arte de abertura
 const SEGURAR_CONFIG := 4.0
+## Parada (ninguém jogando) por este tempo: volta a APRESENTAÇÃO animada.
+const OCIOSO_APRESENTACAO := 60.0
 
 var fundo
 var _t := 0.0
@@ -25,6 +27,7 @@ var _anel_config: Control
 var _explosao: CPUParticles2D
 var _saindo := false
 var _tex_bola: Texture
+var _ocioso := 0.0
 
 
 func _ready() -> void:
@@ -173,6 +176,12 @@ func _montar_painel() -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
+	# parada há 1 minuto: a apresentação de novo (chama a atenção)
+	_ocioso += delta
+	if _ocioso >= OCIOSO_APRESENTACAO and not _saindo and int(Jogo.valor("apresentacao")) == 1:
+		_saindo = true
+		Jogo.ir_para("res://cenas/apresentacao.tscn")
+		return
 	# chamada pulsando e trocando de cor
 	var k := abs(sin(_t * 2.6))
 	_chamada.rect_scale = Vector2.ONE * (1.0 + k * 0.05)
@@ -269,6 +278,8 @@ func _cesta_demo() -> void:
 func _input(ev: InputEvent) -> void:
 	if _saindo:
 		return
+	if ev is InputEventKey or ev is InputEventJoypadButton:
+		_ocioso = 0.0
 	if ev.is_action_pressed("input_pointer") and not ev.is_echo():
 		# a bola caiu na cesta: festa e começa
 		Jogo.tocar("swish")

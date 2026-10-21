@@ -24,6 +24,13 @@ TV Box S905L (Android 7.1). O jogo antigo continua no branch main.
   - Na arena: lampadas da moldura em alta definicao acendendo em sequencia
     e o letreiro de LED correndo (SWISH ARENA, SHOW YOUR GAME, LAZER &
     SPORT GAMES), passando por tras da tabela.
+  - APRESENTACAO (abre o jogo e volta depois de 1 minuto parado na
+    abertura): faixas roxas e laranja cortam a tela, um painel de LED de
+    pontinhos escreve LAZER & SPORT / GAMES / APRESENTA, a bola vem em alta
+    velocidade na direcao da tela, a cesta aparece e a bola cai na rede
+    (SWISH!) e a arte SWISH ARENA entra com clarao e estrelas. START pula
+    para a abertura; uma cesta ja comeca o jogo. Liga/desliga na
+    CONFIGURACAO (APRESENTACAO NA ESPERA).
 
 
 2) BOTOES (ZERO DELAY, IGUAIS AO JOGO ANTIGO)
@@ -44,6 +51,7 @@ TV Box S905L (Android 7.1). O jogo antigo continua no branch main.
     sensor ACIONA: sensor preso ou segurado nao faz ponto; ele precisa
     soltar antes da proxima cesta.
   - Cestas seguidas para EM CHAMAS, volumes.
+  - APRESENTACAO NA ESPERA: sim/nao.
   - TESTE DO SENSOR: jogue uma bola e veja o contador de sinais.
   - TESTAR LEDS, ZERAR RANKING (pede START duas vezes), SALVAR E SAIR.
 
