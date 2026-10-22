@@ -2,7 +2,7 @@ extends Control
 
 ## PLACAR DE LED de 7 segmentos, como o painel das máquinas de basquete.
 ## Os segmentos apagados aparecem escuros (dá a cara de painel de verdade),
-## os acesos têm brilho em volta. O número sobe contando até o valor novo e
+## os acesos têm o miolo quase branco (o LED quente) e brilho em volta. O número sobe contando até o valor novo e
 ## o painel dá um "flash" a cada mudança.
 ##
 ## LEVE PARA A TV BOX: só redesenha quando o número mostrado (ou a cor) muda.
@@ -103,10 +103,12 @@ func _draw() -> void:
 	var acesa := Color(cor.r, cor.g, cor.b)
 	var apagada := Color(cor.r * 0.13, cor.g * 0.13, cor.b * 0.13, 0.9)
 	var brilho_cor := Color(cor.r, cor.g, cor.b, 0.34)
+	var quente := Color(lerp(cor.r, 1.0, 0.62), lerp(cor.g, 1.0, 0.62), lerp(cor.b, 1.0, 0.55))
 	# Segmentos com a borda lisa e um brilho macio em volta dos acesos,
 	# tudo num lote só de triângulos: UMA chamada de desenho por placar.
 	_lote.preparar(self)
 	var acesos := []
+	var miolos := []
 	var x := 0.0
 	for i in range(digitos):
 		if espaco_grupo and i > 0 and (digitos - i) % 3 == 0:
@@ -117,21 +119,25 @@ func _draw() -> void:
 			var pts := _segmento(s, Vector2(x + (larg_dig - w) / 2, 0), w, alt, t)
 			if s in ligados:
 				acesos.append(pts)
+				miolos.append(_segmento(s, Vector2(x + (larg_dig - w) / 2, 0), w, alt, t, 0.36))
 				_lote.aura(pts, brilho_cor, t * 0.9)
 			else:
 				_lote.poligono(pts, apagada)
 		x += larg_dig
 	for pts in acesos:
 		_lote.poligono(pts, acesa)
+	for pts in miolos:
+		_lote.poligono(pts, quente)
 	_lote.desenhar(self)
 
 
 var _lote = preload("res://scripts/traco_suave.gd").new()
 
 
-func _segmento(s: String, o: Vector2, w: float, h: float, t: float) -> PoolVector2Array:
+## "fino" < 1: o miolo quente do segmento (mais fino e um pouco mais curto).
+func _segmento(s: String, o: Vector2, w: float, h: float, t: float, fino := 1.0) -> PoolVector2Array:
 	var m := h / 2.0
-	var g := t * 0.18   # folga entre segmentos
+	var g := t * 0.12   # folga entre segmentos
 	var a: Vector2
 	var b: Vector2
 	match s:
@@ -167,6 +173,10 @@ func _segmento(s: String, o: Vector2, w: float, h: float, t: float) -> PoolVecto
 	var p0 := a + d * g
 	var p1 := b - d * g
 	var meio := t / 2
+	if fino < 1.0:
+		p0 += d * meio * 0.9
+		p1 -= d * meio * 0.9
+		meio *= fino
 	for p in [p0, p0 + d * meio + n * meio, p1 - d * meio + n * meio, p1, p1 - d * meio - n * meio, p0 + d * meio - n * meio]:
 		# itálico: quanto mais alto, mais para a direita
 		pts.append(o + Vector2(p.x + (h - p.y) * inclinacao, p.y))

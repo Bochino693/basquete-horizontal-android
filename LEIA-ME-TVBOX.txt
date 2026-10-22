@@ -4,7 +4,7 @@ SWISH ARENA - BASQUETE ARCADE 1 JOGADOR - TV BOX ANDROID 7.1 EM DIANTE
 Jogo novo, no estilo das maquinas de basquete modernas (Game On): placar
 de LED gigante, fases com meta, modo EM CHAMAS, ultimos segundos valendo
 mais, ranking e recorde. Feito no Godot 3.6 (GLES2) para rodar leve ate na
-TV Box S905L (Android 7.1). Versao 1.0.3-tvbox (aparece na tela de
+TV Box S905L (Android 7.1). Versao 1.0.4-tvbox (aparece na tela de
 CONFIGURACAO, embaixo do teste dos LEDs, e no Android em Aplicativos >
 Swish Arena).
 

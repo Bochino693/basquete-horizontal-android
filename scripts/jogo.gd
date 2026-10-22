@@ -5,7 +5,7 @@ extends Node
 
 ## A VERSÃO DO JOGO (a mesma do export_presets.cfg, version/name; a tela de
 ## configuração mostra). O tools/conferir_lista_build.py confere as duas.
-const VERSAO := "1.0.3-tvbox"
+const VERSAO := "1.0.4-tvbox"
 
 const CAMINHO_CONFIG := "user://swish_config.cfg"
 const CAMINHO_RANKING := "user://swish_ranking.json"
