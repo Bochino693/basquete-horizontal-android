@@ -491,3 +491,9 @@ func _input(ev: InputEvent) -> void:
 		_saindo = true
 		Jogo.tocar("selecao")
 		Jogo.ir_para("res://cenas/abertura.tscn")
+	elif Jogo.pede_config(ev):
+		# controle remoto da TV Box: direto para a configuração
+		_saindo = true
+		Jogo.tocar("selecao")
+		Jogo.parar_musica(0.3)
+		Jogo.ir_para("res://cenas/config.tscn")

@@ -45,10 +45,20 @@ Swish Arena).
   SENSOR DA CESTA .. botao 2 (cada sinal = uma cesta)
   No PC: 1 = START, 2 = SELECT, C = cesta, F10 = configuracao.
 
+  CONTROLE REMOTO DA TV BOX (o do Android): opera a configuracao.
+    Na abertura (ou na apresentacao): MENU, VOLTAR ou qualquer SETA abre
+    a CONFIGURACAO.
+    Na CONFIGURACAO: CIMA/BAIXO escolhem o item (segurar anda direto),
+    ESQUERDA/DIREITA mudam o valor, OK muda / executa, VOLTAR salva e sai.
+    O VOLTAR nunca fecha o jogo. Para sair para o Android:
+    CONFIGURACAO > FECHAR O JOGO (ANDROID), OK e OK de novo (salva antes).
+  A placa Zero Delay nunca manda essas teclas: o jogador nao chega nelas.
 
-3) CONFIGURACAO (SEGURE SELECT 4 SEGUNDOS NA ABERTURA)
-------------------------------------------------------
-  SELECT passa para o proximo item, START muda o valor.
+
+3) CONFIGURACAO (SEGURE SELECT 4 S NA ABERTURA, OU PELO CONTROLE REMOTO)
+-----------------------------------------------------------------------
+  SELECT passa para o proximo item, START muda o valor. No controle
+  remoto: setas escolhem e mudam, OK confirma, VOLTAR salva e sai.
   - Tempo de cada fase, meta da fase 1 e 2.
   - Pontos por cesta e nos ultimos segundos.
   - TRAVA DO SENSOR: tempo minimo entre duas cestas (evita contar a mesma
@@ -58,7 +68,8 @@ Swish Arena).
   - Cestas seguidas para EM CHAMAS, volumes.
   - APRESENTACAO NA ESPERA: sim/nao.
   - TESTE DO SENSOR: jogue uma bola e veja o contador de sinais.
-  - TESTAR LEDS, ZERAR RANKING (pede START duas vezes), SALVAR E SAIR.
+  - TESTAR LEDS, ZERAR RANKING (pede START ou OK duas vezes), SALVAR E
+    SAIR, FECHAR O JOGO (ANDROID: tambem pede duas vezes).
 
 
 4) LEDS (ARDUINO)

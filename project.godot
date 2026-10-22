@@ -12,6 +12,7 @@ boot_splash/fullsize=true
 boot_splash/use_filter=true
 boot_splash/bg_color=Color( 0.03, 0.02, 0.08, 1 )
 config/icon="res://imagens/icone.png"
+config/quit_on_go_back=false
 
 [autoload]
 

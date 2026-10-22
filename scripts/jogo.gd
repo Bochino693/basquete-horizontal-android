@@ -243,6 +243,53 @@ func _db(porcento) -> float:
 	return -80.0 if p <= 0.001 else linear2db(p)
 
 
+# ---------------------------------------------- controle remoto da TV Box
+## O CONTROLE REMOTO DA TV BOX opera a máquina: na abertura (ou na
+## apresentação) MENU, VOLTAR ou qualquer seta abre a configuração; lá as
+## setas escolhem e mudam, OK confirma e VOLTAR salva e sai. A placa Zero
+## Delay é joystick e nunca manda essas teclas: o público não chega nelas.
+## O VOLTAR do Android chega ao Godot 3.6 só como aviso (GO_BACK_REQUEST),
+## sem tecla: aqui ele vira a tecla KEY_BACK, que as telas tratam como o Esc
+## do PC. Com quit_on_go_back=false (project.godot) ele nunca fecha o jogo.
+var _voltar_ms := -1000
+
+
+func _notification(what: int) -> void:
+	if what == MainLoop.NOTIFICATION_WM_GO_BACK_REQUEST:
+		call_deferred("_tecla_voltar")
+
+
+func _tecla_voltar() -> void:
+	if Time.get_ticks_msec() - _voltar_ms < 250:
+		return   # (já chegou como tecla)
+	for apertada in [true, false]:
+		var ev := InputEventKey.new()
+		ev.scancode = KEY_BACK
+		ev.pressed = apertada
+		Input.parse_input_event(ev)
+
+
+func _input(ev: InputEvent) -> void:
+	if ev is InputEventKey and ev.pressed and ev.scancode == KEY_BACK:
+		_voltar_ms = Time.get_ticks_msec()
+
+
+## Tecla do controle remoto (ou do teclado do PC) apertada agora? Com
+## "repetir", segurar a tecla repete (andar na lista).
+static func tecla(ev: InputEvent, teclas: Array, repetir := false) -> bool:
+	return ev is InputEventKey and ev.pressed and (repetir or not ev.echo) and teclas.has(int(ev.scancode))
+
+
+## VOLTAR do controle (Esc no PC).
+static func voltou(ev: InputEvent) -> bool:
+	return tecla(ev, [KEY_BACK, KEY_ESCAPE])
+
+
+## MENU, VOLTAR ou uma seta do controle (F10 no PC): abre a configuração.
+static func pede_config(ev: InputEvent) -> bool:
+	return tecla(ev, [KEY_MENU, KEY_BACK, KEY_ESCAPE, KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_F10])
+
+
 # ---------------------------------------------------------- troca de tela
 ## Escurece, troca a cena por baixo e clareia de novo.
 func ir_para(cena: String) -> void:

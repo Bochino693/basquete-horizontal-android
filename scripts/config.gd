@@ -2,10 +2,14 @@ extends Control
 
 const UI = preload("res://scripts/ui.gd")
 
-## CONFIGURAÇÃO DA MÁQUINA. Só com os botões da máquina:
+## CONFIGURAÇÃO DA MÁQUINA. Com os botões da máquina:
 ##   SELECT = próximo item    START = muda o valor / executa
-## Tem teste do sensor da cesta (conta os sinais ao vivo), teste dos LEDs e
-## zerar ranking (pede confirmação). "SALVAR E SAIR" volta à abertura.
+## ou com o CONTROLE REMOTO DA TV BOX (no PC, o teclado):
+##   CIMA/BAIXO = escolhe    ESQUERDA/DIREITA = muda o valor
+##   OK = muda / executa     VOLTAR = salva e sai
+## Tem teste do sensor da cesta (conta os sinais ao vivo), teste dos LEDs,
+## zerar ranking e fechar o jogo (os dois pedem o aperto de novo).
+## "SALVAR E SAIR" (ou VOLTAR) volta à abertura.
 
 var itens := [
 	{"chave": "tempo_fase_1", "nome": "TEMPO DA FASE 1", "opcoes": [30, 35, 40, 45, 50, 60], "fmt": "%d s"},
@@ -24,10 +28,11 @@ var itens := [
 	{"acao": "leds", "nome": "TESTAR LEDS"},
 	{"acao": "zerar", "nome": "ZERAR RANKING"},
 	{"acao": "sair", "nome": "SALVAR E SAIR"},
+	{"acao": "fechar", "nome": "FECHAR O JOGO (ANDROID)"},
 ]
 
 const TOPO := 118
-const ALTURA := 36
+const ALTURA := 34
 
 var _sel := 0
 var _linhas := []
@@ -36,7 +41,8 @@ var _destaque: Panel
 var _sensor_n := 0
 var _lbl_sensor: Label
 var _lbl_leds: Label
-var _confirmar_zerar := false
+## a ação que espera o aperto de confirmação ("zerar", "fechar")
+var _confirmar := ""
 var _t := 0.0
 var _saindo := false
 var _barra_titulo: ColorRect
@@ -100,8 +106,19 @@ func _ready() -> void:
 	_lbl_leds = UI.label("", Jogo.fonte("texto", 18, 1), Jogo.BRANCO)
 	UI.colocar(_lbl_leds, 16, 322, 308, 80)
 	info.add_child(_lbl_leds)
-	var versao := UI.label("VERSÃO " + Jogo.VERSAO, Jogo.fonte("bungee", 18, 2), Jogo.CIANO)
-	UI.colocar(versao, 890, TOPO + 420, 340, 30)
+	# o controle remoto da TV Box
+	var remoto := UI.painel(Jogo.CIANO, Color(0.04, 0.02, 0.10, 0.88), 18, 3, 16)
+	UI.colocar(remoto, 890, TOPO + 416, 340, 132)
+	add_child(remoto)
+	UI.deslizar(remoto, Vector2(400, 0), 0.3)
+	var titulo_remoto := UI.label("CONTROLE DA TV BOX", Jogo.fonte("bungee", 18, 2), Jogo.LARANJA)
+	UI.colocar(titulo_remoto, 0, 10, 340, 26)
+	remoto.add_child(titulo_remoto)
+	var teclas := UI.label("▲▼ ESCOLHE    ◀▶ MUDA\nOK CONFIRMA    VOLTAR SAI", Jogo.fonte("bungee", 16, 2), Jogo.BRANCO)
+	UI.colocar(teclas, 0, 44, 340, 76)
+	remoto.add_child(teclas)
+	var versao := UI.label("VERSÃO " + Jogo.VERSAO, Jogo.fonte("bungee", 16, 2), Jogo.CIANO)
+	UI.colocar(versao, 890, TOPO + 556, 340, 26)
 	add_child(versao)
 	_mover_destaque(false)
 
@@ -113,8 +130,8 @@ func _atualizar_valores() -> void:
 		if it.has("chave"):
 			var x = Jogo.config[it.chave]
 			v.text = it.nomes[int(x)] if it.has("nomes") else it.fmt % x
-		elif it.acao == "zerar" and _confirmar_zerar and i == _sel:
-			v.text = "START DE NOVO!"
+		elif it.acao == _confirmar and i == _sel:
+			v.text = "APERTE DE NOVO"
 		else:
 			v.text = ""
 
@@ -140,38 +157,72 @@ func _process(delta: float) -> void:
 
 
 func _input(ev: InputEvent) -> void:
-	if _saindo or ev.is_echo():
+	if _saindo:
 		return
-	if ev.is_action_pressed("input_pointer"):
+	if ev.is_action_pressed("input_pointer") and not ev.is_echo():
 		_sensor_n += 1
 		_lbl_sensor.text = "SENSOR OK!\n%d SINAIS" % _sensor_n
 		UI.pulsar(_lbl_sensor, 0.35)
 		Jogo.tocar("swish")
-	elif ev.is_action_pressed("input_select"):
-		_confirmar_zerar = false
-		_sel = (_sel + 1) % itens.size()
-		Jogo.tocar("tique")
-		_mover_destaque()
-		_atualizar_valores()
-	elif ev.is_action_pressed("input_start"):
+	elif ev.is_action_pressed("input_select") and not ev.is_echo():
+		_andar(1)
+	elif ev.is_action_pressed("input_start") and not ev.is_echo():
 		_executar()
+	# controle remoto da TV Box (segurar CIMA/BAIXO anda direto)
+	elif Jogo.tecla(ev, [KEY_DOWN], true):
+		_andar(1)
+	elif Jogo.tecla(ev, [KEY_UP], true):
+		_andar(-1)
+	elif Jogo.tecla(ev, [KEY_RIGHT]):
+		_mudar(1)
+	elif Jogo.tecla(ev, [KEY_LEFT]):
+		_mudar(-1)
+	elif Jogo.tecla(ev, [KEY_ENTER, KEY_KP_ENTER]):
+		_executar()
+	elif Jogo.voltou(ev):
+		_sair()
+
+
+func _andar(passo: int) -> void:
+	_confirmar = ""
+	_sel = (_sel + passo + itens.size()) % itens.size()
+	Jogo.tocar("tique")
+	_mover_destaque()
+	_atualizar_valores()
+
+
+## Valor anterior (-1) ou próximo (1) do item; dá a volta na lista.
+func _mudar(passo: int) -> void:
+	var it: Dictionary = itens[_sel]
+	if not it.has("chave"):
+		return
+	var ops: Array = it.opcoes
+	var atual = Jogo.config[it.chave]
+	var idx := 0
+	for i in range(ops.size()):
+		if abs(float(ops[i]) - float(atual)) < 0.001:
+			idx = (i + passo + ops.size()) % ops.size()
+			break
+	Jogo.config[it.chave] = ops[idx]
+	Jogo.tocar("ponto", -4.0)
+	UI.pulsar(_valores[_sel], 0.35)
+	if it.chave.begins_with("volume"):
+		Jogo.salvar_config()
+	_atualizar_valores()
+
+
+func _sair() -> void:
+	_saindo = true
+	Jogo.salvar_config()
+	Jogo.tocar("selecao")
+	Jogo.ir_para("res://cenas/abertura.tscn")
 
 
 func _executar() -> void:
 	var it: Dictionary = itens[_sel]
 	if it.has("chave"):
-		var ops: Array = it.opcoes
-		var atual = Jogo.config[it.chave]
-		var idx := 0
-		for i in range(ops.size()):
-			if abs(float(ops[i]) - float(atual)) < 0.001:
-				idx = (i + 1) % ops.size()
-				break
-		Jogo.config[it.chave] = ops[idx]
-		Jogo.tocar("ponto", -4.0)
-		UI.pulsar(_valores[_sel], 0.35)
-		if it.chave.begins_with("volume"):
-			Jogo.salvar_config()
+		_mudar(1)
+		return
 	elif it.acao == "leds":
 		Leds.enviar("HIT")
 		Jogo.tocar("fase")
@@ -179,18 +230,23 @@ func _executar() -> void:
 		UI.pulsar(_valores[_sel], 0.35)
 		return
 	elif it.acao == "zerar":
-		if _confirmar_zerar:
+		if _confirmar == "zerar":
 			Jogo.zerar_ranking()
 			Jogo.tocar("alerta")
-			_confirmar_zerar = false
+			_confirmar = ""
 			_atualizar_valores()
 			_valores[_sel].text = "ZERADO!"
 			return
-		_confirmar_zerar = true
+		_confirmar = "zerar"
+	elif it.acao == "fechar":
+		if _confirmar == "fechar":
+			# salva e fecha: a TV Box volta para o Android (os LEDs apagam)
+			_saindo = true
+			Jogo.salvar_config()
+			get_tree().quit()
+			return
+		_confirmar = "fechar"
 	elif it.acao == "sair":
-		_saindo = true
-		Jogo.salvar_config()
-		Jogo.tocar("selecao")
-		Jogo.ir_para("res://cenas/abertura.tscn")
+		_sair()
 		return
 	_atualizar_valores()

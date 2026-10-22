@@ -318,7 +318,9 @@ func _input(ev: InputEvent) -> void:
 		fundo.flash(Jogo.AMARELO, 0.5)
 		UI.pulsar(_chamada, 0.3)
 		_ir("res://cenas/partida.tscn")
-	elif ev is InputEventKey and ev.pressed and ev.scancode == KEY_F10:
+	elif Jogo.pede_config(ev):
+		# controle remoto da TV Box (MENU, VOLTAR ou seta)
+		Jogo.tocar("selecao")
 		_ir("res://cenas/config.tscn")
 
 
