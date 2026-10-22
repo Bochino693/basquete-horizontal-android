@@ -6,6 +6,7 @@ LEIA-ME-TVBOX.txt
 android/plugins/DragonUsbSerial-release.aar
 android/plugins/DragonUsbSerial.gdap
 cenas/abertura.tscn
+cenas/apresentacao.tscn
 cenas/config.tscn
 cenas/partida.tscn
 export_presets.cfg
@@ -46,6 +47,8 @@ imagens/logo_lazer_sport.png
 imagens/logo_lazer_sport.png.import
 imagens/splash.png
 imagens/splash.png.import
+imagens/splash_lazer.png
+imagens/splash_lazer.png.import
 musicas/abertura.ogg
 musicas/abertura.ogg.import
 musicas/partida.ogg
@@ -56,6 +59,7 @@ project.godot
 scripts/abertura.gd
 scripts/anel_segurar.gd
 scripts/anel_tempo.gd
+scripts/apresentacao.gd
 scripts/barra_meta.gd
 scripts/cesta.gd
 scripts/config.gd
@@ -68,6 +72,7 @@ scripts/partida.gd
 scripts/placar_led.gd
 scripts/traco_suave.gd
 scripts/ui.gd
+shaders/brilho_logo.shader
 shaders/luzes_arena.shader
 shaders/rede_mola.shader
 sons/alerta.wav
@@ -108,6 +113,8 @@ sons/fim.wav
 sons/fim.wav.import
 sons/fogo.wav
 sons/fogo.wav.import
+sons/impacto.wav
+sons/impacto.wav.import
 sons/ponto.wav
 sons/ponto.wav.import
 sons/recorde.wav
@@ -121,6 +128,7 @@ sons/tique.wav.import
 sons/vai.wav
 sons/vai.wav.import
 tools/.gdignore
+tools/conferir_lista_build.py
 tools/gerar_apk/EXPORTAR_APK_ANDROID.bat
 tools/gerar_apk/GERAR_APK_COMPLETO.ps1
 tools/gerar_apk/arquivos_build.txt

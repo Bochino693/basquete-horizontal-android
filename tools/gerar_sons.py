@@ -102,3 +102,18 @@ salvar("recorde.wav", fan * 0.8)
 
 # ALERTA: meta não batida / fim de jogo.
 salvar("alerta.wav", np.concatenate([nota(392, 0.2), nota(330, 0.2), nota(262, 0.6)]) * 0.7)
+
+# IMPACTO: pancada grave com brilho (o logo da apresentação ganhando vida).
+# Com semente fixa: gerar de novo dá o mesmo arquivo.
+def impacto():
+    x = t(1.1)
+    queda = 95 * np.exp(-x * 5) + 38
+    corpo = np.sin(np.cumsum(2 * np.pi * queda / TAXA)) * np.exp(-x * 4.5)
+    ruido = np.random.default_rng(11).uniform(-1, 1, len(x))
+    estalo = filtro_passa_banda(ruido, 2400, 1800) * np.exp(-x * 30) * 0.6
+    brilho = np.sin(2 * np.pi * 1568 * x) * np.exp(-x * 6) * 0.12 + np.sin(2 * np.pi * 2093 * x) * np.exp(-x * 7) * 0.08
+    s = corpo * 0.9 + estalo + brilho
+    return s / np.max(np.abs(s))
+
+
+salvar("impacto.wav", impacto() * 0.95)

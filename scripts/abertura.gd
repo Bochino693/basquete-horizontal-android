@@ -31,6 +31,23 @@ var _ocioso := 0.0
 
 
 func _ready() -> void:
+	# O APP ABRE AQUI. Na primeira vez vai para a apresentação (se ela
+	# existir); este quadro mostra a mesma imagem de abertura do app, então
+	# não pisca tela preta nenhuma.
+	if not Jogo.apresentou:
+		Jogo.apresentou = true
+		if Jogo.tem_apresentacao():
+			_saindo = true
+			set_process(false)
+			var capa := TextureRect.new()
+			capa.texture = load("res://imagens/splash_lazer.png")
+			capa.expand = true
+			capa.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+			capa.anchor_right = 1
+			capa.anchor_bottom = 1
+			add_child(capa)
+			call_deferred("_abrir_apresentacao")
+			return
 	_tex_bola = load("res://imagens/bola.png")
 	fundo = preload("res://scripts/fundo_animado.gd").new()
 	fundo.imagem = "res://imagens/fundo_abertura.png"
@@ -122,6 +139,12 @@ func _ready() -> void:
 	Jogo.musica("abertura", -3.0)
 
 
+func _abrir_apresentacao() -> void:
+	if get_tree().change_scene(Jogo.CENA_APRESENTACAO) != OK:
+		# não abriu: segue a abertura normal
+		get_tree().change_scene("res://cenas/abertura.tscn")
+
+
 func _montar_painel() -> void:
 	for c in _painel.get_children():
 		c.queue_free()
@@ -178,9 +201,9 @@ func _process(delta: float) -> void:
 	_t += delta
 	# parada há 1 minuto: a apresentação de novo (chama a atenção)
 	_ocioso += delta
-	if _ocioso >= OCIOSO_APRESENTACAO and not _saindo and int(Jogo.valor("apresentacao")) == 1:
+	if _ocioso >= OCIOSO_APRESENTACAO and not _saindo and Jogo.tem_apresentacao():
 		_saindo = true
-		Jogo.ir_para("res://cenas/apresentacao.tscn")
+		Jogo.ir_para(Jogo.CENA_APRESENTACAO)
 		return
 	# chamada pulsando e trocando de cor
 	var k := abs(sin(_t * 2.6))
