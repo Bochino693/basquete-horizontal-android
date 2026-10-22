@@ -25,12 +25,15 @@ TV Box S905L (Android 7.1). O jogo antigo continua no branch main.
     e o letreiro de LED correndo (SWISH ARENA, SHOW YOUR GAME, LAZER &
     SPORT GAMES), passando por tras da tabela.
   - APRESENTACAO (abre o jogo e volta depois de 1 minuto parado na
-    abertura): faixas roxas e laranja cortam a tela, um painel de LED de
-    pontinhos escreve LAZER & SPORT / GAMES / APRESENTA, a bola vem em alta
-    velocidade na direcao da tela, a cesta aparece e a bola cai na rede
-    (SWISH!) e a arte SWISH ARENA entra com clarao e estrelas. START pula
-    para a abertura; uma cesta ja comeca o jogo. Liga/desliga na
-    CONFIGURACAO (APRESENTACAO NA ESPERA).
+    abertura): o app ja abre com o LOGO DA LAZER & SPORT (a imagem de
+    abertura do app e o primeiro quadro da apresentacao: nenhuma tela
+    preta), o logo ganha vida com impacto, estrelas, holofotes e um reflexo
+    dourado, GAMES entra letra por letra e APRESENTA; as faixas roxas e
+    laranja cortam a tela, a bola vem em alta velocidade, a cesta aparece
+    e a bola cai na rede (SWISH!) e a arte SWISH ARENA entra com clarao e
+    estrelas. START pula para a abertura; uma cesta ja comeca o jogo.
+    Liga/desliga na CONFIGURACAO (APRESENTACAO NA ESPERA). Ela e opcional:
+    o jogo abre pela abertura e so passa por ela se ela estiver no APK.
 
 
 2) BOTOES (ZERO DELAY, IGUAIS AO JOGO ANTIGO)
@@ -78,3 +81,17 @@ TV Box S905L (Android 7.1). O jogo antigo continua no branch main.
               placar_led.gd, cesta.gd, fundo_animado.gd, anel_tempo.gd...
   tools/      gerar_sons.py e gerar_arte.py (efeitos e pecas geradas por
               codigo), gerar_apk/ (gerador do APK)
+
+
+PARA QUEM MEXE NO PROJETO
+-------------------------
+  O GERAR_APK_AGORA.bat usa tools\gerar_apk\arquivos_build.txt (a lista de
+  arquivos desta build): script, cena ou arquivo das pastas do jogo fora
+  dela e tratado como sobra de versao antiga e vai para
+  sobras_de_versoes_antigas. ARQUIVO NOVO TEM DE ENTRAR NA LISTA. Antes de
+  publicar, rode:
+     python3 tools/conferir_lista_build.py
+  (tem de dar "0 problemas"). O .bat tambem se protege sozinho: nunca tira
+  um arquivo que o jogo usa (tudo o que aparece como res://...), traz de
+  volta das sobras o que estiver na lista e para com aviso se faltar a
+  cena inicial ou um script automatico (o APK abriria numa tela preta).

@@ -58,6 +58,21 @@ $DaBuild = New-Object 'System.Collections.Generic.HashSet[string]' ([StringCompa
 foreach ($Linha in [System.IO.File]::ReadAllLines($ListaDaBuild)) {
     if ($Linha.Trim()) { [void]$DaBuild.Add($Linha.Trim().Replace('/', '\')) }
 }
+# Arquivo DESTA build que uma geracao antiga tirou do projeto (guardado em
+# sobras_de_versoes_antigas): volta sozinho para o lugar.
+$Recuperados = 0
+foreach ($Item in @($DaBuild)) {
+    $NoLugar = Join-Path $Raiz $Item
+    $NaSobra = Join-Path (Join-Path $Raiz "sobras_de_versoes_antigas") $Item
+    if (-not (Test-Path -LiteralPath $NoLugar) -and (Test-Path -LiteralPath $NaSobra)) {
+        New-Item -ItemType Directory -Path (Split-Path $NoLugar) -Force | Out-Null
+        Move-Item -LiteralPath $NaSobra -Destination $NoLugar -Force
+        $Recuperados++
+    }
+}
+if ($Recuperados -gt 0) {
+    Write-Host "      Arquivos desta versao trazidos de volta de sobras_de_versoes_antigas: $Recuperados" -ForegroundColor Yellow
+}
 $Faltando = @($DaBuild | Where-Object { -not (Test-Path -LiteralPath (Join-Path $Raiz $_)) })
 if ($Faltando.Count -gt 0) {
     Parar ("O ZIP NAO FOI EXTRAIDO INTEIRO. Faltam $($Faltando.Count) arquivo(s), por exemplo:`n  " +
@@ -103,6 +118,27 @@ function Guardar-Sobra([string]$Caminho, [string]$Rel) {
     Move-Item -LiteralPath $Caminho -Destination $Destino -Force
     [System.IO.File]::WriteAllText((Join-Path (Join-Path $Raiz $Guardadas) ".gdignore"), "")
 }
+# O QUE O JOGO USA NUNCA SAI: todo "res://..." citado no project.godot e
+# nos scripts e cenas desta build (e o .import dele) fica no projeto, mesmo
+# se faltar na lista - sem a cena inicial o APK abriria numa tela preta.
+# (em cadeia: a cena citada pelo script e o script citado pela cena...)
+$Usados = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+$Lidos = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+$ParaLer = New-Object 'System.Collections.Generic.Queue[string]'
+foreach ($Item in $DaBuild) { $ParaLer.Enqueue($Item) }
+while ($ParaLer.Count -gt 0) {
+    $Item = $ParaLer.Dequeue()
+    if (-not ($Item -match '\.(gd|tscn|tres|godot|cfg|gdshader|shader)$') -or -not $Lidos.Add($Item)) { continue }
+    $Caminho = Join-Path $Raiz $Item
+    if (-not (Test-Path -LiteralPath $Caminho)) { continue }
+    $Texto = [System.IO.File]::ReadAllText($Caminho)
+    foreach ($M in [regex]::Matches($Texto, 'res://([^"'' \)\r\n]+)')) {
+        $Usado = $M.Groups[1].Value.Replace('/', '\')
+        [void]$Usados.Add($Usado)
+        [void]$Usados.Add($Usado + '.import')
+        $ParaLer.Enqueue($Usado)
+    }
+}
 $Removidos = 0
 $RaizBarra = $Raiz.TrimEnd('\') + '\'
 foreach ($Arquivo in (Get-ChildItem -LiteralPath $Raiz -Recurse -File -Force -ErrorAction SilentlyContinue)) {
@@ -110,6 +146,10 @@ foreach ($Arquivo in (Get-ChildItem -LiteralPath $Raiz -Recurse -File -Force -Er
     $DoPC = $false
     foreach ($Pasta in $PastasDoPC) { if ($Rel.StartsWith($Pasta + '\', [StringComparison]::OrdinalIgnoreCase)) { $DoPC = $true; break } }
     if ($DoPC -or $DaBuild.Contains($Rel) -or $Arquivo.Name -eq ".gdignore" -or $ArquivosDoPC -contains $Rel) { continue }
+    if ($Usados.Contains($Rel)) {
+        Write-Host "      Mantido (o jogo usa, mas falta na lista da build): $Rel" -ForegroundColor Yellow
+        continue
+    }
     $NaPastaDoJogo = $Rel.Contains('\') -and $PastasDoJogo.Contains($Rel.Split('\')[0])
     if ($NaPastaDoJogo -or ($ExtensoesDeJogo -contains $Arquivo.Extension.ToLower())) {
         Guardar-Sobra $Arquivo.FullName $Rel
@@ -124,6 +164,18 @@ if (Test-Path -LiteralPath (Join-Path $Raiz '.godot')) {
 }
 if ($Removidos -gt 0) {
     Write-Host "      Sobras de versoes antigas tiradas do projeto: $Removidos (guardadas em $Guardadas)." -ForegroundColor Yellow
+}
+# A cena inicial e os scripts automaticos (autoload) tem de existir: sem
+# eles o APK abriria numa tela preta. Melhor parar aqui, dizendo qual falta.
+$Projeto = [System.IO.File]::ReadAllText((Join-Path $Raiz "project.godot"))
+$Essenciais = @()
+$Cena = [regex]::Match($Projeto, '(?m)^run/main_scene="res://([^"]+)"')
+if ($Cena.Success) { $Essenciais += $Cena.Groups[1].Value }
+foreach ($M in [regex]::Matches($Projeto, '(?m)^\w+="\*?res://([^"]+)"')) { $Essenciais += $M.Groups[1].Value }
+foreach ($E in $Essenciais) {
+    if (-not (Test-Path -LiteralPath (Join-Path $Raiz $E.Replace('/', '\')))) {
+        Parar "Falta $E no projeto (o jogo abriria numa tela preta). Extraia o zip da build $Build de novo."
+    }
 }
 
 # PASTAS QUE NAO SAO DO JOGO (fotos, backups, downloads guardados aqui):

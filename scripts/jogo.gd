@@ -6,6 +6,9 @@ extends Node
 const CAMINHO_CONFIG := "user://swish_config.cfg"
 const CAMINHO_RANKING := "user://swish_ranking.json"
 const TAMANHO_RANKING := 10
+## A apresentação animada é OPCIONAL: o jogo abre pela abertura e só vai
+## para ela se a cena existir (um APK sem ela continua rodando).
+const CENA_APRESENTACAO := "res://cenas/apresentacao.tscn"
 
 ## Cores vivas do jogo (as mesmas da arte SWISH ARENA).
 const LARANJA := Color(1.0, 0.48, 0.10)
@@ -38,6 +41,7 @@ var config := {
 }
 
 var ranking := []   # [{pontos, fase, cestas, data}], do maior para o menor
+var apresentou := false   # a apresentação já abriu o jogo nesta vez
 
 var _fontes := {}
 var _sons := {}
@@ -250,6 +254,11 @@ func ir_para(cena: String) -> void:
 	_tween.interpolate_property(_cortina, "modulate:a", 1.0, 0.0, 0.45, Tween.TRANS_SINE, Tween.EASE_OUT)
 	_tween.start()
 	_trocando = false
+
+
+## A apresentação pode tocar agora? (ligada na configuração e no APK)
+func tem_apresentacao() -> bool:
+	return int(config.get("apresentacao", 1)) == 1 and ResourceLoader.exists(CENA_APRESENTACAO)
 
 
 func trocando() -> bool:
