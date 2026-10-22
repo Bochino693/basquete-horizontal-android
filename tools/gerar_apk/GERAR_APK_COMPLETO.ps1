@@ -54,9 +54,11 @@ $ListaDaBuild = Join-Path $Scripts "arquivos_build.txt"
 if (-not (Test-Path -LiteralPath $ListaDaBuild)) {
     Parar "Falta tools\gerar_apk\arquivos_build.txt. Extraia o zip da build $Build de novo (as duas partes)."
 }
+# (o separador de pastas do sistema: "\" no Windows)
+$Sep = [System.IO.Path]::DirectorySeparatorChar
 $DaBuild = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
 foreach ($Linha in [System.IO.File]::ReadAllLines($ListaDaBuild)) {
-    if ($Linha.Trim()) { [void]$DaBuild.Add($Linha.Trim().Replace('/', '\')) }
+    if ($Linha.Trim()) { [void]$DaBuild.Add($Linha.Trim().Replace('/', $Sep)) }
 }
 # Arquivo DESTA build que uma geracao antiga tirou do projeto (guardado em
 # sobras_de_versoes_antigas): volta sozinho para o lugar.
@@ -85,9 +87,9 @@ if ($Faltando.Count -gt 0) {
 # Godot ignorar a pasta inteira; nada dela e apagado nem mexido.
 $Aninhadas = @()
 foreach ($Sub in (Get-ChildItem -LiteralPath $Raiz -Directory -Recurse -Force -ErrorAction SilentlyContinue)) {
-    if ($Sub.FullName -like "*\.git*") { continue }
+    if ($Sub.FullName -like "*$Sep.git*") { continue }
     if (Test-Path -LiteralPath (Join-Path $Sub.FullName "project.godot")) {
-        $Aninhadas += $Sub.FullName.Substring($Raiz.TrimEnd('\').Length + 1)
+        $Aninhadas += $Sub.FullName.Substring($Raiz.TrimEnd($Sep).Length + 1)
         if (-not (Test-Path -LiteralPath (Join-Path $Sub.FullName ".gdignore"))) {
             [System.IO.File]::WriteAllText((Join-Path $Sub.FullName ".gdignore"), "")
             Write-Host "      Outra copia do projeto dentro desta pasta, ignorada: $($Sub.FullName)" -ForegroundColor Yellow
@@ -98,15 +100,15 @@ foreach ($Sub in (Get-ChildItem -LiteralPath $Raiz -Directory -Recurse -Force -E
 # Pastas que sao so do PC (resultado, caches, modelo Android): nao entram
 # na comparacao e nao sao mexidas aqui.
 $Guardadas = "sobras_de_versoes_antigas"
-$PastasDoPC = @('.git', '.import', 'build', 'android\build', 'APK-Pronto', $Guardadas)
+$PastasDoPC = @('.git', '.import', 'build', "android$($Sep)build", 'APK-Pronto', $Guardadas)
 $PastasDoPC += $Aninhadas
 # Arquivos que os proprios .bat criam neste PC (nao vem no zip).
-$ArquivosDoPC = @('android\.build_version')
+$ArquivosDoPC = @("android$($Sep).build_version")
 # As pastas do jogo (as que aparecem na lista da build): dentro delas,
 # qualquer arquivo fora da lista e sobra de versao antiga. Na raiz, so os
 # tipos de arquivo do jogo; o resto (seus arquivos) fica onde esta.
 $PastasDoJogo = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
-foreach ($Item in $DaBuild) { if ($Item.Contains('\')) { [void]$PastasDoJogo.Add($Item.Split('\')[0]) } }
+foreach ($Item in $DaBuild) { if ($Item.Contains($Sep)) { [void]$PastasDoJogo.Add($Item.Split($Sep)[0]) } }
 $ExtensoesDeJogo = @('.gd', '.tscn', '.tres', '.gdshader', '.shader', '.uid', '.import', '.cfg',
     '.gdns', '.gdnlib', '.aar', '.gdap', '.bat', '.ps1', '.kt', '.kts')
 # NADA E APAGADO: as sobras sao MOVIDAS para sobras_de_versoes_antigas (que o
@@ -133,24 +135,24 @@ while ($ParaLer.Count -gt 0) {
     if (-not (Test-Path -LiteralPath $Caminho)) { continue }
     $Texto = [System.IO.File]::ReadAllText($Caminho)
     foreach ($M in [regex]::Matches($Texto, 'res://([^"'' \)\r\n]+)')) {
-        $Usado = $M.Groups[1].Value.Replace('/', '\')
+        $Usado = $M.Groups[1].Value.Replace('/', $Sep)
         [void]$Usados.Add($Usado)
         [void]$Usados.Add($Usado + '.import')
         $ParaLer.Enqueue($Usado)
     }
 }
 $Removidos = 0
-$RaizBarra = $Raiz.TrimEnd('\') + '\'
+$RaizBarra = $Raiz.TrimEnd($Sep) + $Sep
 foreach ($Arquivo in (Get-ChildItem -LiteralPath $Raiz -Recurse -File -Force -ErrorAction SilentlyContinue)) {
     $Rel = $Arquivo.FullName.Substring($RaizBarra.Length)
     $DoPC = $false
-    foreach ($Pasta in $PastasDoPC) { if ($Rel.StartsWith($Pasta + '\', [StringComparison]::OrdinalIgnoreCase)) { $DoPC = $true; break } }
+    foreach ($Pasta in $PastasDoPC) { if ($Rel.StartsWith($Pasta + $Sep, [StringComparison]::OrdinalIgnoreCase)) { $DoPC = $true; break } }
     if ($DoPC -or $DaBuild.Contains($Rel) -or $Arquivo.Name -eq ".gdignore" -or $ArquivosDoPC -contains $Rel) { continue }
     if ($Usados.Contains($Rel)) {
         Write-Host "      Mantido (o jogo usa, mas falta na lista da build): $Rel" -ForegroundColor Yellow
         continue
     }
-    $NaPastaDoJogo = $Rel.Contains('\') -and $PastasDoJogo.Contains($Rel.Split('\')[0])
+    $NaPastaDoJogo = $Rel.Contains($Sep) -and $PastasDoJogo.Contains($Rel.Split($Sep)[0])
     if ($NaPastaDoJogo -or ($ExtensoesDeJogo -contains $Arquivo.Extension.ToLower())) {
         Guardar-Sobra $Arquivo.FullName $Rel
         $Removidos++
@@ -197,7 +199,11 @@ $Misturados = @()
 foreach ($Arquivo in $Carimbados) {
     if (-not ((Get-Content -LiteralPath (Join-Path $Raiz $Arquivo) -Raw) -match "SWISH_BUILD=$Build\b")) { $Misturados += $Arquivo }
 }
-if (-not ((Get-Content -LiteralPath (Join-Path $Raiz "export_presets.cfg") -Raw) -match "(?m)^version/code=$Build\b")) { $Misturados += "export_presets.cfg" }
+# (A VERSAO DO JOGO - version/code e version/name do export_presets.cfg -
+# muda a cada versao nova e NAO e o numero da build destes scripts: ela nao
+# entra nesta conferencia. Foi o que parou a geracao na versao 1.0.2.)
+$Versao = [regex]::Match((Get-Content -LiteralPath (Join-Path $Raiz "export_presets.cfg") -Raw), '(?m)^version/name="([^"]+)"').Groups[1].Value
+if (-not $Versao) { $Misturados += "export_presets.cfg (sem version/name)" }
 if ($Misturados.Count -gt 0) {
     Parar ("Estes arquivos nao sao da build ${Build}:`n  " + ($Misturados -join "`n  ") +
         "`nExtraia o zip da build $Build de novo, respondendo SIM para substituir tudo.")
@@ -217,7 +223,7 @@ if (Test-Path $ApkEsperado) {
     Remove-Item -LiteralPath $ApkEsperado -Force
 }
 
-Write-Host "Projeto confirmado: Swish Arena - build $Build - TV Box S905L (Android 7.1) - Godot $VersaoGodot" -ForegroundColor Green
+Write-Host "Projeto confirmado: Swish Arena $Versao - TV Box TX9 / Mali-450 (Android 7.1+) - Godot $VersaoGodot" -ForegroundColor Green
 
 # ------------------------------------------------------------------
 # ESPACO EM DISCO. Sem espaco o Gradle falha no meio ("Espaco insuficiente
@@ -574,7 +580,7 @@ if (-not $CacheDestaBuild) {
         Remove-Item -LiteralPath $Cache -Recurse -Force
     }
     Get-ChildItem -LiteralPath $Raiz -Recurse -File -Filter "*.import" -ErrorAction SilentlyContinue |
-        Where-Object { $_.FullName -notlike "*\android\build\*" } |
+        Where-Object { $_.FullName -notlike "*$($Sep)android$($Sep)build$($Sep)*" } |
         ForEach-Object {
             $Texto = [System.IO.File]::ReadAllText($_.FullName)
             $Novo = [regex]::Replace($Texto, '(?m)^(path(\.\w+)?|dest_files)=.*\r?\n', '')
@@ -637,9 +643,17 @@ try {
     $Zip.Dispose()
 }
 
+# A COPIA PARA O PENDRIVE: APK-Pronto\SwishArena-<versao>.apk (o nome diz a
+# versao; a pasta so tem o APK desta geracao).
+$PastaPronto = Join-Path $Raiz "APK-Pronto"
+New-Item -ItemType Directory -Path $PastaPronto -Force | Out-Null
+Get-ChildItem -LiteralPath $PastaPronto -Filter "SwishArena*.apk" -ErrorAction SilentlyContinue | Remove-Item -Force
+$Pronto = Join-Path $PastaPronto "SwishArena-$Versao.apk"
+Copy-Item -LiteralPath $Apk.FullName -Destination $Pronto -Force
+
 Write-Host ""
-Write-Host "APK GERADO E CONFERIDO - build $Build, sem erros" -ForegroundColor Green
+Write-Host "APK GERADO E CONFERIDO - Swish Arena $Versao, sem erros" -ForegroundColor Green
 Write-Host "Conferido: motor ARM 32 e 64 bits e plugin USB (Arduino: LEDs, sensores e botoes) dentro do APK."
-Write-Host "Arquivo: $($Apk.FullName)"
+Write-Host "Arquivo: $Pronto"
 Write-Host "Tamanho: $([math]::Round($Apk.Length / 1MB, 2)) MB"
 Write-Host "SHA256: $((Get-FileHash -LiteralPath $Apk.FullName -Algorithm SHA256).Hash)"

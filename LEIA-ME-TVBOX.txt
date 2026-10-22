@@ -82,9 +82,12 @@ Swish Arena).
 
 5) GERAR O APK E INSTALAR (SEMPRE ASSIM)
 ----------------------------------------
-  - No PC: dois cliques em GERAR_APK_AGORA.bat.
-  - Sai em build\android\SwishArena-S905L.apk
-  - Pendrive -> TV Box -> instalar.
+  - GitHub (Bochino693/basquete-horizontal-android): Code > Download ZIP.
+    Extraia o ZIP INTEIRO (pasta nova, ou responda SIM para substituir).
+  - No PC: dois cliques em GERAR_APK_AGORA.bat. Precisa do SDK Android em
+    C:\AndroidSdk e do Java 17 (o Godot 3.6.2 e os modelos ele baixa).
+  - Sai em APK-Pronto\SwishArena-<versao>.apk (a pasta abre sozinha no
+    fim). Pendrive -> TV Box -> instalar (instala por cima do anterior).
 
 
 6) ARQUIVOS

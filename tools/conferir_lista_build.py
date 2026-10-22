@@ -13,7 +13,10 @@ apresentacao sumiu e o jogo abriu sem a cena inicial. Este conferidor:
   3. avisa arquivo das pastas do jogo que nao esta na lista (o .bat o
      tiraria do projeto);
   4. confere se a versao que o jogo mostra (VERSAO do scripts/jogo.gd) e a
-     mesma do APK (version/name do export_presets.cfg).
+     mesma do APK (version/name do export_presets.cfg);
+  5. confere o carimbo dos scripts do gerador (SWISH_BUILD dos dois .bat =
+     $Build do GERAR_APK_COMPLETO.ps1): diferentes, o .bat para dizendo que
+     os arquivos nao sao da mesma build.
 Sai com erro (1) se achar qualquer problema.
 """
 import os
@@ -84,6 +87,15 @@ def main():
     if not apk or not jogo or apk.group(1) != jogo.group(1):
         problemas.append("VERSAO DIFERENTE: export_presets.cfg %s, scripts/jogo.gd %s"
                          % (versao, jogo.group(1) if jogo else "?"))
+    # 5. o carimbo dos scripts do gerador
+    with open(os.path.join(RAIZ, "tools", "gerar_apk", "GERAR_APK_COMPLETO.ps1"), encoding="utf-8") as f:
+        build = re.search(r'^\$Build = (\d+)', f.read(), re.M)
+    for bat in ("GERAR_APK_AGORA.bat", os.path.join("tools", "gerar_apk", "EXPORTAR_APK_ANDROID.bat")):
+        with open(os.path.join(RAIZ, bat), encoding="utf-8") as f:
+            carimbo = re.search(r'SWISH_BUILD=(\d+)', f.read())
+        if not build or not carimbo or carimbo.group(1) != build.group(1):
+            problemas.append("CARIMBO DIFERENTE: %s SWISH_BUILD=%s, GERAR_APK_COMPLETO.ps1 $Build = %s"
+                             % (bat, carimbo.group(1) if carimbo else "?", build.group(1) if build else "?"))
     for p in problemas:
         print(p)
     print("versao %s - lista da build: %d arquivos, %d usados pelo jogo, %d problemas" % (versao, len(lista), len(usados), len(problemas)))
