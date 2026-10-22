@@ -11,7 +11,9 @@ apresentacao sumiu e o jogo abriu sem a cena inicial. Este conferidor:
      project.godot) e avisa o que falta na lista;
   2. avisa arquivo da lista que nao existe;
   3. avisa arquivo das pastas do jogo que nao esta na lista (o .bat o
-     tiraria do projeto).
+     tiraria do projeto);
+  4. confere se a versao que o jogo mostra (VERSAO do scripts/jogo.gd) e a
+     mesma do APK (version/name do export_presets.cfg).
 Sai com erro (1) se achar qualquer problema.
 """
 import os
@@ -73,9 +75,18 @@ def main():
                 if rel.startswith("tools/") and "__pycache__" in rel:
                     continue
                 problemas.append("na pasta do jogo e FORA DA LISTA (o .bat tiraria): " + rel)
+    # 4. a versao do jogo e a do APK
+    with open(os.path.join(RAIZ, "export_presets.cfg"), encoding="utf-8") as f:
+        apk = re.search(r'^version/name="([^"]*)"', f.read(), re.M)
+    with open(os.path.join(RAIZ, "scripts", "jogo.gd"), encoding="utf-8") as f:
+        jogo = re.search(r'^const VERSAO := "([^"]*)"', f.read(), re.M)
+    versao = apk.group(1) if apk else "?"
+    if not apk or not jogo or apk.group(1) != jogo.group(1):
+        problemas.append("VERSAO DIFERENTE: export_presets.cfg %s, scripts/jogo.gd %s"
+                         % (versao, jogo.group(1) if jogo else "?"))
     for p in problemas:
         print(p)
-    print("lista da build: %d arquivos, %d usados pelo jogo, %d problemas" % (len(lista), len(usados), len(problemas)))
+    print("versao %s - lista da build: %d arquivos, %d usados pelo jogo, %d problemas" % (versao, len(lista), len(usados), len(problemas)))
     return 1 if problemas else 0
 
 

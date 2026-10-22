@@ -3,6 +3,10 @@ extends Node
 ## O "cérebro" do Swish Arena (autoload Jogo): configuração da máquina,
 ## recorde e ranking salvos na TV Box, fontes, sons e troca de tela.
 
+## A VERSÃO DO JOGO (a mesma do export_presets.cfg, version/name; a tela de
+## configuração mostra). O tools/conferir_lista_build.py confere as duas.
+const VERSAO := "1.0.3-tvbox"
+
 const CAMINHO_CONFIG := "user://swish_config.cfg"
 const CAMINHO_RANKING := "user://swish_ranking.json"
 const TAMANHO_RANKING := 10

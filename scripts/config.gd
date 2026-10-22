@@ -100,6 +100,9 @@ func _ready() -> void:
 	_lbl_leds = UI.label("", Jogo.fonte("texto", 18, 1), Jogo.BRANCO)
 	UI.colocar(_lbl_leds, 16, 322, 308, 80)
 	info.add_child(_lbl_leds)
+	var versao := UI.label("VERSÃO " + Jogo.VERSAO, Jogo.fonte("bungee", 18, 2), Jogo.CIANO)
+	UI.colocar(versao, 890, TOPO + 420, 340, 30)
+	add_child(versao)
 	_mover_destaque(false)
 
 
