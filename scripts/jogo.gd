@@ -34,6 +34,7 @@ var config := {
 	"duracao_fogo": 8.0,
 	"volume_musica": 70,
 	"volume_efeitos": 100,
+	"apresentacao": 1,        # 1 = a apresentação animada abre o jogo e volta na espera
 }
 
 var ranking := []   # [{pontos, fase, cestas, data}], do maior para o menor
