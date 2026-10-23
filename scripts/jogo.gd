@@ -5,7 +5,7 @@ extends Node
 
 ## A VERSÃO DO JOGO (a mesma do export_presets.cfg, version/name; a tela de
 ## configuração mostra). O tools/conferir_lista_build.py confere as duas.
-const VERSAO := "1.1.0-tvbox"
+const VERSAO := "1.1.1-tvbox"
 
 const CAMINHO_CONFIG := "user://swish_config.cfg"
 const CAMINHO_RANKING := "user://swish_ranking.json"
@@ -35,7 +35,7 @@ var config := {
 	"pontos_cesta": 2,
 	"pontos_sprint": 3,
 	"segundos_sprint": 10,
-	"trava_sensor": 0.7,
+	"trava_sensor": 0.9,
 	"cestas_fogo": 4,
 	"janela_fogo": 3.0,
 	"duracao_fogo": 8.0,
@@ -104,16 +104,17 @@ func _carregar_config() -> void:
 		return
 	for k in config.keys():
 		config[k] = c.get_value("jogo", k, config[k])
-	# configuração salva antes da trava de 0,7 s: passa a usar 0,7 s
-	if int(c.get_value("jogo", "versao", 1)) < 2:
-		config.trava_sensor = 0.7
+	# configuração salva antes da trava de 0,9 s (1.1.1): passa a usar no
+	# mínimo 0,9 s (a mesma bola girando no aro não marca duas cestas)
+	if int(c.get_value("jogo", "versao", 1)) < 3:
+		config.trava_sensor = max(float(config.trava_sensor), 0.9)
 
 
 func salvar_config() -> void:
 	var c := ConfigFile.new()
 	for k in config.keys():
 		c.set_value("jogo", k, config[k])
-	c.set_value("jogo", "versao", 2)
+	c.set_value("jogo", "versao", 3)
 	c.save(CAMINHO_CONFIG)
 	aplicar_volumes()
 

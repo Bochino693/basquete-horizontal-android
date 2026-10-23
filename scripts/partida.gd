@@ -433,7 +433,8 @@ func _jogar_de_novo() -> void:
 
 
 func _sensor() -> void:
-	# no mínimo a trava (0,7 s) depois da cesta anterior
+	# no mínimo a trava (0,9 s) depois da cesta anterior: a mesma bola
+	# girando no aro não marca duas cestas
 	if estado != JOGANDO:
 		return
 	if _t < _trava_ate:

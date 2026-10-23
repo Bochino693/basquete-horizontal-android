@@ -4,7 +4,7 @@ SWISH ARENA - BASQUETE ARCADE 1 JOGADOR - TV BOX ANDROID 7.1 EM DIANTE
 Jogo novo, no estilo das maquinas de basquete modernas (Game On): placar
 de LED gigante, fases com meta, modo EM CHAMAS, ultimos segundos valendo
 mais, ranking e recorde. Feito no Godot 3.6 (GLES2) para rodar leve ate na
-TV Box S905L (Android 7.1). Versao 1.1.0-tvbox (aparece na tela de
+TV Box S905L (Android 7.1). Versao 1.1.1-tvbox (aparece na tela de
 CONFIGURACAO, embaixo do teste dos LEDs, e no Android em Aplicativos >
 Swish Arena).
 
@@ -74,7 +74,8 @@ Swish Arena).
   - Tempo de cada fase, meta da fase 1 e 2.
   - Pontos por cesta e nos ultimos segundos.
   - TRAVA DO SENSOR: tempo minimo entre duas cestas (evita contar a mesma
-    bola duas vezes). Padrao 0,7 s. Alem disso a cesta so conta quando o
+    bola duas vezes, como a bola girando no aro). Padrao 0,9 s (a
+    1.1.1 passa para 0,9 s a configuracao gravada com menos). Alem disso a cesta so conta quando o
     sensor ACIONA: sensor preso ou segurado nao faz ponto; ele precisa
     soltar antes da proxima cesta.
   - Cestas seguidas para EM CHAMAS, volumes.
