@@ -1,6 +1,8 @@
 extends Control
 
 const UI = preload("res://scripts/ui.gd")
+const TracoSuave = preload("res://scripts/traco_suave.gd")
+const Arremesso = preload("res://scripts/arremesso.gd")
 
 ## PARTIDA DO SWISH ARENA (1 jogador), no estilo das máquinas Game On.
 ##
@@ -12,6 +14,13 @@ const UI = preload("res://scripts/ui.gd")
 ##   Com cestas_fogo seguidas: EM CHAMAS, pontos x2 enquanto durar.
 ## - Últimos segundos_sprint de cada fase: a cesta vale pontos_sprint.
 ## - Fim: placar final contando, estatísticas, recorde e ranking.
+##
+## EFEITOS: cada cesta é um ARREMESSO EM PERSPECTIVA (a bola grande vem da
+## frente da tela até o aro, com rastro), o SWISH no aro (raios, ondas, a
+## tabela acendendo e um "zoom" de impacto), fogos de artifício na meta
+## batida, no EM CHAMAS e no recorde batido durante a partida.
+## SEM TRAVAR: os avisos, os "+N", as bolas e as ondas são peças prontas,
+## reaproveitadas; as fontes já ficam prontas (todas as letras) antes.
 
 enum { CONTAGEM, JOGANDO, ENTRE_FASES, RESULTADO }
 
@@ -61,6 +70,20 @@ var lbl_recorde_val
 var camada_fx: Control
 var camada_topo: CanvasLayer
 var chamas_tela: CPUParticles2D
+var arremesso
+var fogos
+var painel_recorde: Panel
+var _tabela: Node2D
+var _lote_tabela = TracoSuave.new()
+var _tabela_brilho := 0.0
+var _tabela_cor := Color(1, 1, 1)
+var _recorde_inicial := 0
+var _recorde_ao_vivo := false
+var _aviso_tw: SceneTreeTween
+var _flutuantes := []
+var _flutua_tw := []
+var _flutua_prox := 0
+var _flutua_lado := 1.0
 var _tremor := 0.0
 var _raiz: Control
 
@@ -72,6 +95,10 @@ var f_painel: Font
 var f_painel_p: Font
 var f_numero_gigante: Font
 var f_flutua: Font
+var f_aviso: Font
+var f_aviso_grande: Font
+var f_ban_titulo: Font
+var f_ban_sub: Font
 
 
 func _ready() -> void:
@@ -83,9 +110,17 @@ func _ready() -> void:
 	f_painel_p = Jogo.fonte("bungee", 17, 2)
 	f_numero_gigante = Jogo.fonte("titan", 220, 10)
 	f_flutua = Jogo.fonte("titan", 64, 5)
-	for f in [f_titulo, f_titulo_grande, f_flutua]:
-		Jogo.preaquecer(f, "0123456789+xX!ÇÃÉÊÍÓÚ ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	# fontes de tamanho FIXO e com todas as letras já desenhadas: escolher o
+	# tamanho e desenhar letras na hora do aviso dava um tranco na TV Box
+	f_aviso = Jogo.fonte("titan", 72, 6)
+	f_aviso_grande = Jogo.fonte("titan", 88, 6)
+	f_ban_titulo = UI.fonte_que_cabe("titan", 120, 8, "FASE CONCLUÍDA!", 1180)
+	f_ban_sub = UI.fonte_que_cabe("bungee", 30, 3, "META: 999 PONTOS EM 999 s", 1180)
+	var letras := "0123456789+xX!:.ºÇÃÁÂÉÊÍÓÔÕÚ ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	for f in [f_titulo, f_titulo_grande, f_flutua, f_aviso, f_aviso_grande, f_ban_titulo, f_ban_sub, f_sub, f_painel, f_painel_p]:
+		Jogo.preaquecer(f, letras)
 	Jogo.preaquecer(f_numero_gigante, "123VAI!")
+	_recorde_inicial = Jogo.recorde()
 	_montar()
 	Leds.enviar("PLAY")
 	Jogo.musica("partida", -2.0)
@@ -108,9 +143,21 @@ func _montar() -> void:
 	fundo.escurecer = 0.0
 	_raiz.add_child(fundo)
 
+	# a tabela de vidro da arte acende a cada cesta (desenhada uma vez)
+	_tabela = Node2D.new()
+	var aditivo := CanvasItemMaterial.new()
+	aditivo.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	_tabela.material = aditivo
+	_tabela.modulate = Color(1, 1, 1, 0)
+	_tabela.connect("draw", self, "_desenhar_tabela")
+	_raiz.add_child(_tabela)
+	_raiz.connect("resized", self, "_posicionar_tabela")
+	_posicionar_tabela()
+
 	cesta = preload("res://scripts/cesta.gd").new()
 	cesta.position = RIM
 	_raiz.add_child(cesta)
+	cesta.connect("swish", self, "_no_swish")
 
 	chamas_tela = _criar_chamas_da_tela()
 	_raiz.add_child(chamas_tela)
@@ -164,6 +211,7 @@ func _montar() -> void:
 	var p_rec := UI.painel(Jogo.AMARELO, Color(0.04, 0.02, 0.10, 0.7), 16, 2, 12)
 	UI.colocar(p_rec, 24, 560, 300, 130)
 	_raiz.add_child(p_rec)
+	painel_recorde = p_rec
 	var t_rec := UI.label("RECORDE", f_painel_p, Jogo.AMARELO)
 	UI.colocar(t_rec, 0, 8, 300, 26)
 	p_rec.add_child(t_rec)
@@ -184,11 +232,34 @@ func _montar() -> void:
 	UI.colocar(lbl_cestas, 0, 36, 300, 84)
 	p_cestas.add_child(lbl_cestas)
 
+	# o arremesso (a bola grande voando na frente de tudo) e os fogos
+	arremesso = Arremesso.new()
+	arremesso.cesta = cesta
+	arremesso.altura_tela = get_viewport_rect().size.y
+	_raiz.add_child(arremesso)
+	fogos = preload("res://scripts/fogos.gd").new()
+	_raiz.add_child(fogos)
+
 	camada_fx = Control.new()
 	camada_fx.anchor_right = 1
 	camada_fx.anchor_bottom = 1
 	camada_fx.mouse_filter = MOUSE_FILTER_IGNORE
 	_raiz.add_child(camada_fx)
+	# o "zoom" de impacto do SWISH é em volta do aro
+	_raiz.rect_pivot_offset = RIM
+	# avisos e "+N": prontos (um aviso só, trocado; quatro "+N" em rodízio)
+	_aviso_atual = UI.label("", f_aviso, Jogo.BRANCO)
+	UI.colocar(_aviso_atual, 160, 332, 960, 106)
+	_aviso_atual.visible = false
+	camada_fx.add_child(_aviso_atual)
+	for i in 4:
+		var fl := UI.label("+2", f_flutua, Jogo.BRANCO)
+		fl.rect_size = Vector2(400, 120)
+		fl.rect_pivot_offset = fl.rect_size / 2
+		fl.visible = false
+		camada_fx.add_child(fl)
+		_flutuantes.append(fl)
+		_flutua_tw.append(null)
 
 	camada_topo = CanvasLayer.new()
 	camada_topo.layer = 10
@@ -313,10 +384,10 @@ func _banner(titulo: String, sub: String, cor: Color, dur: float) -> void:
 	borda2.color = cor
 	UI.colocar(borda2, 0, 215, 1280, 5)
 	faixa.add_child(borda2)
-	var lt := UI.label(titulo, UI.fonte_que_cabe("titan", 120, 8, titulo, 1180), Jogo.BRANCO)
+	var lt := UI.label(titulo, f_ban_titulo, Jogo.BRANCO)
 	UI.colocar(lt, 0, 10, 1280, 140)
 	faixa.add_child(lt)
-	var ls := UI.label(sub, UI.fonte_que_cabe("bungee", 30, 3, sub, 1180), cor.lightened(0.5))
+	var ls := UI.label(sub, f_ban_sub, cor.lightened(0.5))
 	UI.colocar(ls, 0, 150, 1280, 50)
 	faixa.add_child(ls)
 	var tw := Tween.new()
@@ -399,14 +470,24 @@ func _cesta() -> void:
 	UI.pulsar(painel_placar, 0.06, 0.25)
 
 	var cor := Jogo.VERMELHO if fogo_restante > 0.0 else (Jogo.AMARELO if sprint else Jogo.LARANJA)
-	cesta.anotar(cor)
-	fundo.flash(cor, 0.22 if combo < 3 else 0.35)
-	_tremor = 6.0 if fogo_restante > 0.0 else 3.0
-	# o "+2" sobe do aro e some dentro da tabela: não cruza os avisos nem o
-	# placar (texto nenhum em cima de outro)
-	UI.flutuar(camada_fx, "+%d" % valor_cesta, f_flutua, cor.lightened(0.3), RIM + Vector2(0, -40), RIM + Vector2(0, -105), 0.8)
+	# a bola grande sai da frente da tela e voa até o aro (o SWISH, a rede,
+	# os raios e o zoom vêm quando ela chega: _no_swish)
+	var tipo := 0
+	if fogo_restante > 0.0:
+		tipo = 2
+	elif sprint:
+		tipo = 1
+	arremesso.lancar(cor, tipo)
+	Jogo.tocar("arremesso", -6.0, rand_range(0.95, 1.08))
+	# o "+2" sai do aro quando a bola do arremesso cai nele (não fica em
+	# cima da bola grande voando), sobe e some dentro da tabela: não cruza
+	# os avisos nem o placar (texto nenhum em cima de outro)
+	# (um de cada lado do aro, alternando: cestas seguidas não empilham)
+	_flutua_lado = -_flutua_lado
+	var lado := Vector2(_flutua_lado * rand_range(30.0, 75.0), 0)
+	_flutuar("+%d" % valor_cesta, cor.lightened(0.3), RIM + lado + Vector2(0, -40), RIM + lado + Vector2(0, -105), Arremesso.DURACAO)
+	_conferir_recorde()
 
-	Jogo.tocar("swish", 0.0, rand_range(0.95, 1.05))
 	if combo >= 2:
 		Jogo.tocar("combo_%d" % min(combo - 1, 12), 1.0)
 		chip_combo.text = "COMBO x%d" % combo
@@ -430,6 +511,103 @@ func _cesta() -> void:
 		_aviso("META BATIDA!", Jogo.VERDE, 1.6)
 		fundo.flash(Jogo.VERDE, 0.45)
 		UI.cor_painel(painel_fase, Jogo.VERDE)
+		fogos.soltar(3, [Jogo.VERDE, Jogo.CIANO, Jogo.BRANCO])
+
+
+## A bola do arremesso passou pelo aro: o SWISH! A tabela acende, a tela dá
+## um "zoom" de impacto no aro e treme; clarão na tela só nos momentos fortes.
+func _no_swish(cor: Color) -> void:
+	Jogo.tocar("swish", 0.0, rand_range(0.95, 1.05))
+	_tabela_brilho = 1.0
+	_tabela_cor = cor.linear_interpolate(Jogo.BRANCO, 0.35)
+	var forte := fogo_restante > 0.0 or combo >= 3
+	_tremor = 6.0 if fogo_restante > 0.0 else 3.0
+	if forte:
+		fundo.flash(cor, 0.3)
+	var tw := create_tween()
+	tw.tween_property(_raiz, "rect_scale", Vector2.ONE * (1.045 if forte else 1.03), 0.07).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.tween_property(_raiz, "rect_scale", Vector2.ONE, 0.26).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+## Bateu o recorde da máquina NO MEIO da partida: festa na hora e o painel
+## do recorde passa a acompanhar os pontos.
+func _conferir_recorde() -> void:
+	if _recorde_ao_vivo:
+		lbl_recorde_val.mostrar_direto(pontos)
+		return
+	if _recorde_inicial <= 0 or pontos <= _recorde_inicial:
+		return
+	_recorde_ao_vivo = true
+	lbl_recorde_val.mostrar_direto(pontos)
+	Jogo.tocar("recorde", -2.0)
+	Leds.enviar("RECORD")
+	_aviso("NOVO RECORDE!", Jogo.AMARELO, 1.6, true)
+	fogos.soltar(5, [Jogo.AMARELO, Jogo.ROSA, Jogo.CIANO, Jogo.LARANJA, Jogo.BRANCO])
+	UI.cor_painel(painel_recorde, Jogo.ROSA)
+	UI.pulsar(painel_recorde, 0.2, 0.4)
+
+
+## A tabela de vidro (da arte, 1920 x 1080: a arte cobre a tela) acompanha
+## o tamanho da tela como o letreiro.
+func _posicionar_tabela() -> void:
+	var tam := _raiz.rect_size
+	var k: float = max(tam.x / 1920.0, tam.y / 1080.0)
+	_tabela.scale = Vector2(k, k)
+	_tabela.position = (tam - Vector2(1920, 1080) * k) / 2.0
+	# (Pool*Array no Godot 3 é cópia: monta de novo num lote novo)
+	_lote_tabela = TracoSuave.new()
+	_tabela.update()
+
+
+func _desenhar_tabela() -> void:
+	if _lote_tabela.indices.size() == 0:
+		_lote_tabela.preparar(_tabela)
+		var borda := _retangulo(Rect2(644, 472, 632, 476), 14.0)
+		_lote_tabela.linha_brilho(borda, Color(1, 1, 1, 0.6), 50.0, true)
+		_lote_tabela.linha(borda, Color(1, 1, 1, 0.85), 6.0, true)
+		var mira := _retangulo(Rect2(816, 692, 290, 204), 4.0)
+		_lote_tabela.linha_brilho(mira, Color(1, 1, 1, 0.5), 30.0, true)
+		_lote_tabela.linha(mira, Color(1, 1, 1, 0.7), 4.0, true)
+	_lote_tabela.desenhar(_tabela)
+
+
+static func _retangulo(r: Rect2, raio: float) -> PoolVector2Array:
+	var pts := PoolVector2Array()
+	var cantos := [Vector2(r.end.x - raio, r.position.y + raio), Vector2(r.end.x - raio, r.end.y - raio),
+		Vector2(r.position.x + raio, r.end.y - raio), Vector2(r.position.x + raio, r.position.y + raio)]
+	for i in 4:
+		var a0: float = -PI / 2 + i * PI / 2
+		for k in 5:
+			var a: float = a0 + PI / 2 * k / 4.0
+			pts.append(cantos[i] + Vector2(cos(a), sin(a)) * raio)
+	return pts
+
+
+## "+N" que sobe do aro (depois de "atraso" segundos): quatro prontos em
+## rodízio; entra crescendo e sai encolhendo (nunca meio transparente).
+func _flutuar(texto: String, cor: Color, de: Vector2, ate: Vector2, atraso := 0.0) -> void:
+	var k := _flutua_prox
+	_flutua_prox = (_flutua_prox + 1) % _flutuantes.size()
+	var l: Label = _flutuantes[k]
+	# o mesmo "+N" reaproveitado antes de acabar: a animação velha para
+	var velho = _flutua_tw[k]
+	if velho != null and velho.is_valid():
+		velho.kill()
+	l.text = texto
+	l.add_color_override("font_color", cor)
+	l.rect_position = de - l.rect_size / 2
+	l.rect_scale = Vector2(0.3, 0.3)
+	l.visible = atraso <= 0.0
+	var tw := create_tween()
+	_flutua_tw[k] = tw
+	if atraso > 0.0:
+		tw.tween_interval(atraso)
+		tw.tween_callback(l, "set_visible", [true])
+	tw.tween_property(l, "rect_scale", Vector2(1.25, 1.25), 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(l, "rect_position", ate - l.rect_size / 2, 0.8).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_property(l, "rect_scale", Vector2(0.9, 0.9), 0.38)
+	tw.tween_property(l, "rect_scale", Vector2.ZERO, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	tw.tween_callback(l, "set_visible", [false])
 
 
 ## AVISOS GRANDES (EM CHAMAS, combo, meta, últimos segundos): sempre no
@@ -439,26 +617,29 @@ var _aviso_atual: Label
 
 
 func _aviso(texto: String, cor: Color, dur: float, grande := false) -> void:
-	if _aviso_atual != null and is_instance_valid(_aviso_atual):
-		_aviso_atual.queue_free()
-	var f := UI.fonte_que_cabe("titan", 88 if grande else 72, 6, texto, 960)
-	var l := UI.label(texto, f, cor)
-	UI.colocar(l, 160, 332, 960, 106)
-	camada_fx.add_child(l)
-	_aviso_atual = l
-	var tw := Tween.new()
-	l.add_child(tw)
-	tw.interpolate_property(l, "rect_scale", Vector2(0.3, 0.3), Vector2(1.08, 1.08), 0.2, Tween.TRANS_BACK, Tween.EASE_OUT)
-	tw.interpolate_property(l, "rect_scale", Vector2(1.08, 1.08), Vector2.ONE, 0.15, Tween.TRANS_SINE, Tween.EASE_OUT, 0.2)
-	tw.interpolate_property(l, "modulate:a", 1.0, 0.0, 0.25, Tween.TRANS_SINE, Tween.EASE_IN, dur - 0.25)
-	tw.interpolate_callback(l, dur, "queue_free")
-	tw.start()
+	var l := _aviso_atual
+	if _aviso_tw != null and _aviso_tw.is_valid():
+		_aviso_tw.kill()
+	l.text = texto
+	l.add_font_override("font", f_aviso_grande if grande else f_aviso)
+	l.add_color_override("font_color", cor)
+	l.rect_scale = Vector2(0.3, 0.3)
+	l.visible = true
+	# entra crescendo e sai encolhendo: o texto com contorno fica sempre
+	# inteiro (meio transparente o contorno aparece por dentro das letras)
+	_aviso_tw = create_tween()
+	_aviso_tw.tween_property(l, "rect_scale", Vector2(1.08, 1.08), 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_aviso_tw.tween_property(l, "rect_scale", Vector2.ONE, 0.15).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	_aviso_tw.tween_interval(max(0.1, dur - 0.55))
+	_aviso_tw.tween_property(l, "rect_scale", Vector2.ZERO, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	_aviso_tw.tween_callback(l, "set_visible", [false])
 
 
 func _tirar_aviso() -> void:
-	if _aviso_atual != null and is_instance_valid(_aviso_atual):
-		_aviso_atual.queue_free()
-	_aviso_atual = null
+	if _aviso_tw != null and _aviso_tw.is_valid():
+		_aviso_tw.kill()
+	if _aviso_atual != null:
+		_aviso_atual.visible = false
 
 
 func _frase_combo(n: int) -> String:
@@ -481,6 +662,7 @@ func _entrar_fogo() -> void:
 	chip_fogo.visible = true
 	UI.pop(chip_fogo)
 	_aviso("EM CHAMAS!", Color(1, 0.55, 0.1), 1.5, true)
+	fogos.soltar(2, [Jogo.LARANJA, Jogo.VERMELHO])
 
 
 func _sair_fogo() -> void:
@@ -506,6 +688,15 @@ func _process(delta: float) -> void:
 		_raiz.rect_position = Vector2(rand_range(-_tremor, _tremor), rand_range(-_tremor, _tremor))
 	elif _raiz.rect_position != Vector2.ZERO:
 		_raiz.rect_position = Vector2.ZERO
+	# a tabela acesa vai apagando (no EM CHAMAS ela fica pulsando laranja)
+	_tabela_brilho = max(0.0, _tabela_brilho - delta * 2.2)
+	var base := 0.0
+	var cor_t := _tabela_cor
+	if fogo_restante > 0.0:
+		base = 0.28 + 0.12 * sin(_t * 9.0)
+		if _tabela_brilho < base:
+			cor_t = Color(1.0, 0.45, 0.1)
+	_tabela.modulate = Color(cor_t.r, cor_t.g, cor_t.b, max(_tabela_brilho, base))
 	if estado == RESULTADO:
 		_processar_resultado(delta)
 		return

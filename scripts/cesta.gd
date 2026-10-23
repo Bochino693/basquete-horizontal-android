@@ -6,8 +6,14 @@ extends Node2D
 ##
 ## LEVE PARA A TV BOX: aro e rede são desenhados UMA vez. A cor do aro muda
 ## pelo modulate do nó; o balanço e a esticada da rede são feitos pela placa
-## de vídeo (shader rede_mola). Só as ondas de choque redesenham, e só
-## enquanto existem.
+## de vídeo (shader rede_mola). As bolas, as ondas de choque e a explosão de
+## raios são peças prontas, reaproveitadas (nada é criado nem redesenhado
+## durante a partida).
+##
+## A bola que cai é a bola desenhada (bola3d, a mesma do arremesso): quando
+## ela vem do ARREMESSO (arremesso.gd), entra no aro de onde chegou.
+
+signal swish(cor)                   # a bola passou pelo aro (rede, ondas, raios)
 
 export var raio_x := 96.0
 export var raio_y := 15.0
@@ -19,7 +25,9 @@ var _atras: Node2D
 var _rede: Node2D
 var _aro: Node2D
 var _aro_brilho: Node2D
-var _ondas_no: Node2D
+var _raios: Sprite
+var _raios_t := 9.0
+var _raios_giro := 0.0
 var _mat_rede: ShaderMaterial
 var _bolas: Node2D
 var _faiscas: CPUParticles2D
@@ -29,19 +37,19 @@ var _halo: Sprite
 var _t := 0.0
 var _estica := 0.0        # rede esticada (mola)
 var _estica_vel := 0.0
-var _ondas := []          # ondas de choque [{t, cor}]
-var _tex_bola: Texture
+var _ondas := []          # ondas de choque: sprites prontos [{no, t}]
+var _onda_prox := 0
+var _pool_bolas := []
+var _bola_prox := 0
 const TracoSuave = preload("res://scripts/traco_suave.gd")
+const Bola3D = preload("res://scripts/bola3d.gd")
 var _lote_atras = TracoSuave.new()
 var _lote_rede = TracoSuave.new()
 var _lote_aro = TracoSuave.new()
 var _lote_aro_brilho = TracoSuave.new()
-var _lote_ondas = TracoSuave.new()
-var _tinha_ondas := false
 
 
 func _ready() -> void:
-	_tex_bola = load("res://imagens/bola.png")
 	var aditivo := CanvasItemMaterial.new()
 	aditivo.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 
@@ -56,6 +64,14 @@ func _ready() -> void:
 	_atras = _camada("_desenhar_atras")
 	_bolas = Node2D.new()
 	add_child(_bolas)
+	for i in 3:
+		var b = Bola3D.new()
+		b.tamanho(raio_x * 1.18)
+		b.velocidade = 9.0
+		b.visible = false
+		b.set_process(false)
+		_bolas.add_child(b)
+		_pool_bolas.append(b)
 	_rede = _camada("_desenhar_rede")
 	_mat_rede = ShaderMaterial.new()
 	_mat_rede.shader = load("res://shaders/rede_mola.shader")
@@ -64,7 +80,21 @@ func _ready() -> void:
 	_rede.material = _mat_rede
 	_aro = _camada("_desenhar_aro")
 	_aro_brilho = _camada("_desenhar_aro_brilho")
-	_ondas_no = _camada("_desenhar_ondas")
+	# ondas de choque (elipses que crescem) e a explosão de raios: prontas
+	var tex_anel := load("res://imagens/anel_onda.png")
+	for i in 4:
+		var o := Sprite.new()
+		o.texture = tex_anel
+		o.material = aditivo
+		o.visible = false
+		add_child(o)
+		_ondas.append({"no": o, "t": 9.0})
+	_raios = Sprite.new()
+	_raios.texture = load("res://imagens/raios.png")
+	_raios.material = aditivo
+	_raios.position = Vector2(0, -6)
+	_raios.visible = false
+	add_child(_raios)
 
 	_faiscas = _criar_explosao(load("res://imagens/faisca.png"), 34, aditivo)
 	_estrelas = _criar_explosao(load("res://imagens/estrela.png"), 10, aditivo)
@@ -139,35 +169,56 @@ func _set_chamas(v: bool) -> void:
 
 
 ## Uma cesta: a bola cai pelo aro. cor = cor do destaque (onda e faíscas).
-func anotar(cor: Color = Color(1.0, 0.6, 0.15)) -> void:
-	var b := Sprite.new()
-	b.texture = _tex_bola
-	var escala := (raio_x * 1.18) / _tex_bola.get_width()
-	b.scale = Vector2(escala, escala)
-	var x0 := rand_range(-raio_x * 0.45, raio_x * 0.45)
-	b.position = Vector2(x0, -300)
+## "entrada" (local ao aro): de onde a bola do ARREMESSO chega; sem ela, a
+## bola cai de cima (apresentação).
+func anotar(cor: Color = Color(1.0, 0.6, 0.15), entrada = null) -> void:
+	var b = _pool_bolas[_bola_prox]
+	_bola_prox = (_bola_prox + 1) % _pool_bolas.size()
+	b.visible = true
+	b.set_process(true)
+	b.modulate.a = 1.0
 	b.rotation = randf() * TAU
-	_bolas.add_child(b)
-	var tw := Tween.new()
-	b.add_child(tw)
-	# desce acelerando até o aro, passa pela rede e some embaixo
-	tw.interpolate_property(b, "position", Vector2(x0, -300), Vector2(x0 * 0.3, 0), 0.32, Tween.TRANS_QUAD, Tween.EASE_IN)
-	tw.interpolate_property(b, "position", Vector2(x0 * 0.3, 0), Vector2(0, altura_rede + 80), 0.30, Tween.TRANS_LINEAR, Tween.EASE_IN, 0.32)
-	tw.interpolate_property(b, "rotation", b.rotation, b.rotation + 5.0, 0.62)
-	tw.interpolate_property(b, "modulate:a", 1.0, 0.0, 0.14, Tween.TRANS_LINEAR, Tween.EASE_IN, 0.50)
-	tw.interpolate_callback(self, 0.30, "_passou_no_aro", cor)
-	tw.interpolate_callback(b, 0.66, "queue_free")
-	tw.start()
+	var tw := create_tween()
+	var queda := Vector2(0, altura_rede + 80)
+	if entrada == null:
+		var x0 := rand_range(-raio_x * 0.45, raio_x * 0.45)
+		b.position = Vector2(x0, -300)
+		# desce acelerando até o aro, passa pela rede e some embaixo
+		tw.tween_property(b, "position", Vector2(x0 * 0.3, 0), 0.32).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		tw.tween_callback(self, "_passou_no_aro", [cor])
+	else:
+		var e: Vector2 = entrada
+		b.position = e
+		tw.tween_property(b, "position", Vector2(e.x * 0.3, 0), 0.07).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		tw.tween_callback(self, "_passou_no_aro", [cor])
+	tw.tween_property(b, "position", queda, 0.30)
+	tw.parallel().tween_property(b, "modulate:a", 0.0, 0.14).set_delay(0.18)
+	tw.tween_callback(self, "_guardar_bola", [b])
+
+
+func _guardar_bola(b) -> void:
+	b.visible = false
+	b.set_process(false)
 
 
 func _passou_no_aro(cor: Color) -> void:
 	_estica_vel = 9.0
-	_ondas.append({"t": 0.0, "cor": cor})
+	var o: Dictionary = _ondas[_onda_prox]
+	_onda_prox = (_onda_prox + 1) % _ondas.size()
+	o.t = 0.0
+	o.no.visible = true
+	o.no.modulate = cor
 	var rampa: Gradient = _faiscas.color_ramp
 	rampa.set_offset(1, 1.0)
 	rampa.set_color(1, Color(cor.r, cor.g, cor.b, 0.0))
 	_faiscas.restart()
 	_estrelas.restart()
+	# explosão de raios de luz no aro (o "SWISH!")
+	_raios_t = 0.0
+	_raios_giro = rand_range(-0.5, 0.5)
+	_raios.visible = true
+	_raios.modulate = cor.linear_interpolate(Color(1, 1, 1), 0.45)
+	emit_signal("swish", cor)
 
 
 func _process(delta: float) -> void:
@@ -175,10 +226,28 @@ func _process(delta: float) -> void:
 	# mola da rede
 	_estica_vel += (-_estica * 60.0 - _estica_vel * 7.0) * delta
 	_estica += _estica_vel * delta
+	# ondas de choque: elipses do aro crescendo e sumindo (só sprites)
 	for o in _ondas:
+		if not o.no.visible:
+			continue
 		o.t += delta
-	while not _ondas.empty() and _ondas[0].t > 0.6:
-		_ondas.pop_front()
+		var k: float = o.t / 0.6
+		if k >= 1.0:
+			o.no.visible = false
+			continue
+		var cresce := 1.0 + k * 1.6
+		o.no.scale = Vector2(raio_x * cresce / 110.0, raio_y * cresce / 110.0)
+		o.no.modulate.a = (1.0 - k) * 0.95
+	if _raios.visible:
+		_raios_t += delta
+		var kr := _raios_t / 0.5
+		if kr >= 1.0:
+			_raios.visible = false
+		else:
+			var s: float = lerp(0.5, 2.3, 1.0 - pow(1.0 - kr, 3.0))
+			_raios.scale = Vector2(s * 1.25, s * 0.85)
+			_raios.rotation = _raios_giro * kr
+			_raios.modulate.a = (1.0 - kr) * (1.0 - kr)
 	var pulso := 0.30 + sin(_t * 3.0) * 0.08
 	_halo.modulate = Color(1.0, 0.25, 0.05, pulso + 0.25) if em_chamas else Color(1.0, 0.45, 0.1, pulso)
 	var c := _cor_aro()
@@ -187,9 +256,6 @@ func _process(delta: float) -> void:
 	# a rede balança e estica na placa de vídeo: só 2 números por quadro
 	_mat_rede.set_shader_param("estica", _estica)
 	_mat_rede.set_shader_param("balanco", sin(_t * 2.2) * 3.0)
-	if not _ondas.empty() or _tinha_ondas:
-		_ondas_no.update()
-	_tinha_ondas = not _ondas.empty()
 
 
 func _cor_aro() -> Color:
@@ -261,19 +327,3 @@ func _desenhar_aro_brilho(no: Node2D) -> void:
 		_lote_aro_brilho.preparar(no)
 		_lote_aro_brilho.linha(_elipse(0, -1.5, raio_x, raio_y, 0.15, PI - 0.15, 24), Color(1, 0.95, 0.8, 0.8), 2.0)
 	_lote_aro_brilho.desenhar(no)
-
-
-## Ondas de choque: só redesenham enquanto existem.
-func _desenhar_ondas(no: Node2D) -> void:
-	if _ondas.empty():
-		return
-	var lote = _lote_ondas
-	lote.preparar(no)
-	for o in _ondas:
-		var k: float = o.t / 0.6
-		var cor_o: Color = o.cor
-		cor_o.a = (1.0 - k) * 0.9
-		var anel := _elipse(0, 0, raio_x * (1.0 + k * 1.6), raio_y * (1.0 + k * 1.6), 0, TAU, 40)
-		anel.remove(anel.size() - 1)
-		lote.linha(anel, cor_o, 5.0 * (1.0 - k) + 1.0, true)
-	lote.desenhar(no)

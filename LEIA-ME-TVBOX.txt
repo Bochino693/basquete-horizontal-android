@@ -4,7 +4,7 @@ SWISH ARENA - BASQUETE ARCADE 1 JOGADOR - TV BOX ANDROID 7.1 EM DIANTE
 Jogo novo, no estilo das maquinas de basquete modernas (Game On): placar
 de LED gigante, fases com meta, modo EM CHAMAS, ultimos segundos valendo
 mais, ranking e recorde. Feito no Godot 3.6 (GLES2) para rodar leve ate na
-TV Box S905L (Android 7.1). Versao 1.0.4-tvbox (aparece na tela de
+TV Box S905L (Android 7.1). Versao 1.1.0-tvbox (aparece na tela de
 CONFIGURACAO, embaixo do teste dos LEDs, e no Android em Aplicativos >
 Swish Arena).
 
@@ -26,6 +26,18 @@ Swish Arena).
   - Na arena: lampadas da moldura em alta definicao acendendo em sequencia
     e o letreiro de LED correndo (SWISH ARENA, SHOW YOUR GAME, LAZER &
     SPORT GAMES), passando por tras da tabela.
+  - CADA CESTA (1.1.0): a bola sai GRANDE de baixo da tela, voa em
+    perspectiva com rastro de luz (dourado no SPRINT, de fogo no EM
+    CHAMAS) e vai diminuindo ate cair no aro. No aro: SWISH com ondas de
+    luz, raios girando, a tabela acende o neon e a arena da um leve zoom
+    (mais forte com combo ou EM CHAMAS). FOGOS DE ARTIFICIO na META BATIDA,
+    ao entrar EM CHAMAS e no NOVO RECORDE, que agora aparece AO VIVO,
+    no meio da partida, quando passa o recorde.
+  - SEM TRAVAR (1.1.0): placar, numeros do relogio e anel do tempo
+    desenhados por shader em alta resolucao (nao sao refeitos a cada
+    quadro), textos de aviso com tamanhos fixos ja preparados na entrada da
+    partida e bolas, ondas e avisos reaproveitados (nada e criado durante
+    a cesta). O clarao da tela inteira so vem nos momentos fortes.
   - APRESENTACAO (abre o jogo e volta depois de 1 minuto parado na
     abertura): o app ja abre com o LOGO DA LAZER & SPORT (a imagem de
     abertura do app e o primeiro quadro da apresentacao: nenhuma tela
@@ -95,8 +107,12 @@ Swish Arena).
   cenas/      abertura, partida, config
   scripts/    jogo.gd (config, ranking, sons, fontes), leds_usb.gd,
               placar_led.gd, cesta.gd, fundo_animado.gd, anel_tempo.gd...
-  tools/      gerar_sons.py e gerar_arte.py (efeitos e pecas geradas por
-              codigo), gerar_apk/ (gerador do APK)
+  scripts/    (1.1.0) arremesso.gd (a bola grande em perspectiva),
+              fogos.gd (fogos de artificio), bola3d.gd
+  shaders/    display7 (digitos de LED), anel_tempo, bola
+  tools/      gerar_sons.py, gerar_arte.py e gerar_efeitos.py (efeitos,
+              digitos e pecas geradas por codigo), gerar_apk/ (gerador
+              do APK)
 
 
 PARA QUEM MEXE NO PROJETO

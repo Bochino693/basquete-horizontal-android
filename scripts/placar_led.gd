@@ -2,17 +2,21 @@ extends Control
 
 ## PLACAR DE LED de 7 segmentos, como o painel das máquinas de basquete.
 ## Os segmentos apagados aparecem escuros (dá a cara de painel de verdade),
-## os acesos têm o miolo quase branco (o LED quente) e brilho em volta. O número sobe contando até o valor novo e
-## o painel dá um "flash" a cada mudança.
+## os acesos têm o miolo quase branco (o LED quente) e brilho em volta. O
+## número sobe contando até o valor novo e o painel dá um "flash" a cada
+## mudança.
 ##
-## LEVE PARA A TV BOX: só redesenha quando o número mostrado (ou a cor) muda.
-## O flash e o pisca-pisca mudam o brilho do nó (self_modulate), sem refazer
-## os segmentos.
+## NÍTIDO E LEVE PARA A TV BOX: cada dígito é um quadrado com a textura de
+## CAMPO DE DISTÂNCIA dele (imagens/d7_*.png, tools/gerar_efeitos.py); o
+## shaders/display7.shader calcula por pixel a borda (1 pixel da tela), o
+## miolo quente e o brilho. Mudar o número (a contagem anda a cada quadro)
+## só troca a textura de cada casa: nada de geometria refeita no GDScript.
+## O flash e o pisca-pisca mudam o brilho do nó (modulate).
 
 export var digitos := 6
 export var espaco_grupo := true        # "040 000": espaço a cada 3 dígitos
 export var cor := Color(1.0, 0.48, 0.10) setget definir_cor
-export var inclinacao := 0.10          # itálico dos dígitos
+export var inclinacao := 0.10          # (os dígitos já vêm inclinados nas texturas)
 export var contar := true              # anima a contagem até o valor
 
 var valor := 0 setget definir_valor
@@ -20,12 +24,11 @@ var _exibido := 0.0
 var _flash := 0.0
 var _piscar := false
 var _t := 0.0
-var _texto_desenhado := ""
-
-const SEGMENTOS := {
-	"0": "abcdef", "1": "bc", "2": "abged", "3": "abgcd", "4": "fgbc",
-	"5": "afgcd", "6": "afgedc", "7": "abc", "8": "abcdefg", "9": "abcdfg", " ": "",
-}
+var _mostrado := ""
+var _casas := []
+var _altura := 1.0
+var _mat: ShaderMaterial
+var _tex := {}
 
 
 func definir_valor(v: int) -> void:
@@ -39,16 +42,15 @@ func definir_valor(v: int) -> void:
 
 
 func definir_cor(c: Color) -> void:
-	if c == cor:
-		return
 	cor = c
-	update()
+	if _mat != null:
+		_mat.set_shader_param("cor", c)
 
 
 func mostrar_direto(v: int) -> void:
 	valor = v
 	_exibido = v
-	update()
+	_mostrar()
 
 
 func piscar(ligado: bool) -> void:
@@ -57,7 +59,56 @@ func piscar(ligado: bool) -> void:
 
 
 func _ready() -> void:
+	mouse_filter = MOUSE_FILTER_IGNORE
+	_mat = ShaderMaterial.new()
+	_mat.shader = load("res://shaders/display7.shader")
+	_mat.set_shader_param("cor", cor)
+	_mat.set_shader_param("apagado", 0.75)
+	for ch in "0123456789":
+		_tex[ch] = load("res://imagens/d7_%s.png" % ch)
+	_tex[" "] = load("res://imagens/d7_vazio.png")
+	connect("resized", self, "_montar")
+	_montar()
 	set_process(true)
+
+
+## As casas dos dígitos (refeitas só se o tamanho do placar mudar).
+func _montar() -> void:
+	for m in _casas:
+		m.queue_free()
+	_casas = []
+	if rect_size.x < 1.0 or rect_size.y < 1.0:
+		return
+	var grupos := int(ceil(digitos / 3.0)) - 1 if espaco_grupo else 0
+	var larg_dig := rect_size.x / (digitos + grupos * 0.45)
+	# a altura da caixa, ou menos se a casa for estreita (o dígito tem 0,56 h)
+	_altura = min(rect_size.y, larg_dig * 0.84 / 0.56)
+	var quad := _quadrado(_altura)
+	var x := 0.0
+	for i in range(digitos):
+		if espaco_grupo and i > 0 and (digitos - i) % 3 == 0:
+			x += larg_dig * 0.45
+		var m := MeshInstance2D.new()
+		m.mesh = quad
+		m.material = _mat
+		m.position = Vector2(x + (larg_dig - _altura * 0.56) * 0.5, (rect_size.y - _altura) * 0.5)
+		add_child(m)
+		_casas.append(m)
+		x += larg_dig
+	_ajustar_nitidez()
+	_mostrado = ""
+	_mostrar()
+
+
+## A borda tem 1 pixel DA TELA: o shader precisa da altura do dígito em
+## pixels de verdade (a janela em 720p ou 1080p). Só a escala da tela conta:
+## os painéis que pulam/crescem por um instante não mudam a borda.
+func _ajustar_nitidez() -> void:
+	var esc := 1.0
+	var vp := get_viewport()
+	if vp != null:
+		esc = vp.get_final_transform().get_scale().x * vp.canvas_transform.get_scale().x
+	_mat.set_shader_param("altura_px", _altura * max(abs(esc), 0.05))
 
 
 func _process(delta: float) -> void:
@@ -71,15 +122,14 @@ func _process(delta: float) -> void:
 	if _flash > 0.0:
 		_flash = max(0.0, _flash - delta * 2.5)
 		ativo = true
-	if _texto() != _texto_desenhado:
-		update()
-	# flash e pisca-pisca pelo brilho do nó: não redesenha
+	_mostrar()
+	# flash e pisca-pisca pelo brilho do nó
 	var b := 1.0 + _flash * 0.6
 	if _piscar:
 		ativo = true
 		if fmod(_t, 0.5) < 0.2:
 			b *= 0.35
-	self_modulate = Color(b, b, b, 1.0)
+	modulate = Color(b, b, b, 1.0)
 	if not ativo:
 		set_process(false)
 
@@ -91,93 +141,31 @@ func _texto() -> String:
 	return texto
 
 
-func _draw() -> void:
+## Troca só as texturas das casas que mudaram.
+func _mostrar() -> void:
+	if _casas.empty():
+		return
 	var texto := _texto()
-	_texto_desenhado = texto
-	var grupos := int(ceil(digitos / 3.0)) - 1 if espaco_grupo else 0
-	var larg_total := rect_size.x
-	var alt := rect_size.y
-	var larg_dig := larg_total / (digitos + grupos * 0.45)
-	var w := larg_dig * 0.78
-	var t := min(w * 0.19, alt * 0.11)
-	var acesa := Color(cor.r, cor.g, cor.b)
-	var apagada := Color(cor.r * 0.13, cor.g * 0.13, cor.b * 0.13, 0.9)
-	var brilho_cor := Color(cor.r, cor.g, cor.b, 0.34)
-	var quente := Color(lerp(cor.r, 1.0, 0.62), lerp(cor.g, 1.0, 0.62), lerp(cor.b, 1.0, 0.55))
-	# Segmentos com a borda lisa e um brilho macio em volta dos acesos,
-	# tudo num lote só de triângulos: UMA chamada de desenho por placar.
-	_lote.preparar(self)
-	var acesos := []
-	var miolos := []
-	var x := 0.0
+	if texto == _mostrado:
+		return
+	_mostrado = texto
 	for i in range(digitos):
-		if espaco_grupo and i > 0 and (digitos - i) % 3 == 0:
-			x += larg_dig * 0.45
-		var ch := texto[i]
-		var ligados: String = SEGMENTOS.get(ch, "")
-		for s in "abcdefg":
-			var pts := _segmento(s, Vector2(x + (larg_dig - w) / 2, 0), w, alt, t)
-			if s in ligados:
-				acesos.append(pts)
-				miolos.append(_segmento(s, Vector2(x + (larg_dig - w) / 2, 0), w, alt, t, 0.36))
-				_lote.aura(pts, brilho_cor, t * 0.9)
-			else:
-				_lote.poligono(pts, apagada)
-		x += larg_dig
-	for pts in acesos:
-		_lote.poligono(pts, acesa)
-	for pts in miolos:
-		_lote.poligono(pts, quente)
-	_lote.desenhar(self)
+		_casas[i].texture = _tex.get(texto[i], _tex[" "])
 
 
-var _lote = preload("res://scripts/traco_suave.gd").new()
-
-
-## "fino" < 1: o miolo quente do segmento (mais fino e um pouco mais curto).
-func _segmento(s: String, o: Vector2, w: float, h: float, t: float, fino := 1.0) -> PoolVector2Array:
-	var m := h / 2.0
-	var g := t * 0.12   # folga entre segmentos
-	var a: Vector2
-	var b: Vector2
-	match s:
-		"a":
-			a = Vector2(0, 0)
-			b = Vector2(w, 0)
-		"g":
-			a = Vector2(0, m)
-			b = Vector2(w, m)
-		"d":
-			a = Vector2(0, h)
-			b = Vector2(w, h)
-		"f":
-			a = Vector2(0, 0)
-			b = Vector2(0, m)
-		"e":
-			a = Vector2(0, m)
-			b = Vector2(0, h)
-		"b":
-			a = Vector2(w, 0)
-			b = Vector2(w, m)
-		"c":
-			a = Vector2(w, m)
-			b = Vector2(w, h)
+## O quadrado de um dígito de altura "h": cobre o dígito inclinado e o
+## brilho em volta; o UV aponta para a textura de 256 px (160 px por altura).
+func _quadrado(h: float) -> ArrayMesh:
 	var pts := PoolVector2Array()
-	# Recuo para dentro da caixa (o traço não sai do dígito).
-	var dentro := Vector2(t / 2, t / 2)
-	var caixa := Vector2(w - t, h - t)
-	a = Vector2(dentro.x + a.x / w * caixa.x, dentro.y + a.y / h * caixa.y)
-	b = Vector2(dentro.x + b.x / w * caixa.x, dentro.y + b.y / h * caixa.y)
-	var d := (b - a).normalized()
-	var n := Vector2(-d.y, d.x)
-	var p0 := a + d * g
-	var p1 := b - d * g
-	var meio := t / 2
-	if fino < 1.0:
-		p0 += d * meio * 0.9
-		p1 -= d * meio * 0.9
-		meio *= fino
-	for p in [p0, p0 + d * meio + n * meio, p1 - d * meio + n * meio, p1, p1 - d * meio - n * meio, p0 + d * meio - n * meio]:
-		# itálico: quanto mais alto, mais para a direita
-		pts.append(o + Vector2(p.x + (h - p.y) * inclinacao, p.y))
-	return pts
+	var uvs := PoolVector2Array()
+	for p in [Vector2(-0.35, -0.30), Vector2(0.91, -0.30), Vector2(0.91, 1.30), Vector2(-0.35, 1.30)]:
+		pts.append(p * h)
+		uvs.append(Vector2((p.x - 0.28) * 160.0 / 256.0 + 0.5, (p.y - 0.5) * 160.0 / 256.0 + 0.5))
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = pts
+	arr[Mesh.ARRAY_TEX_UV] = uvs
+	arr[Mesh.ARRAY_INDEX] = PoolIntArray([0, 1, 2, 0, 2, 3])
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	return m

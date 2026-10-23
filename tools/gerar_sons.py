@@ -117,3 +117,37 @@ def impacto():
 
 
 salvar("impacto.wav", impacto() * 0.95)
+
+
+# ARREMESSO: o "vuuup" da bola grande saindo da frente da tela até o aro
+# (ar passando: ruído filtrado subindo de tom, que some no fim).
+def arremesso():
+    x = t(0.5)
+    r = np.random.default_rng(21).normal(0, 1, len(x))
+    partes = []
+    for i, centro in enumerate(np.linspace(700, 2600, 10)):
+        trecho = filtro_passa_banda(r, centro, 500)
+        partes.append(trecho * np.exp(-((x - 0.04 - i * 0.04) / 0.07) ** 2))
+    s = sum(partes)
+    return s / np.max(np.abs(s)) * np.clip(x / 0.05, 0, 1)
+
+
+salvar("arremesso.wav", arremesso() * 0.5)
+
+
+# FOGOS: o estouro do fogo de artifício (pancada curta + estalinhos).
+def fogos():
+    x = t(0.9)
+    rr = np.random.default_rng(23)
+    corpo = np.sin(np.cumsum(2 * np.pi * (120 * np.exp(-x * 9) + 60) / TAXA)) * np.exp(-x * 9)
+    estouro = filtro_passa_banda(rr.uniform(-1, 1, len(x)), 1800, 1600) * np.exp(-x * 22)
+    estalos = np.zeros(len(x))
+    for _ in range(26):
+        i0 = int(rr.uniform(0.08, 0.8) * TAXA)
+        n = int(0.012 * TAXA)
+        estalos[i0:i0 + n] += rr.uniform(-1, 1, n) * np.exp(-np.arange(n) / (0.002 * TAXA)) * rr.uniform(0.2, 0.6)
+    s = corpo * 0.8 + estouro * 0.7 + filtro_passa_banda(estalos, 4000, 2500) * 1.6
+    return s / np.max(np.abs(s))
+
+
+salvar("fogos.wav", fogos() * 0.8)
