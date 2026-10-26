@@ -65,15 +65,16 @@ static func _tween(no: Node) -> Tween:
 	return tw
 
 
-## Entra "pulando": cresce do pequeno com um leve exagero.
+## Entra "pulando": cresce do pequeno até o tamanho certo (sem passar de
+## 1,0: a letra ampliada fica serrilhada na TV).
 static func pop(no: CanvasItem, atraso := 0.0, dur := 0.45, de := 0.2) -> void:
 	var tw := _tween(no)
 	no.modulate.a = 0.0
 	tw.interpolate_property(no, "modulate:a", 0.0, 1.0, dur * 0.5, Tween.TRANS_SINE, Tween.EASE_OUT, atraso)
 	if no is Control:
-		tw.interpolate_property(no, "rect_scale", Vector2(de, de), Vector2.ONE, dur, Tween.TRANS_BACK, Tween.EASE_OUT, atraso)
+		tw.interpolate_property(no, "rect_scale", Vector2(de, de), Vector2.ONE, dur, Tween.TRANS_QUART, Tween.EASE_OUT, atraso)
 	else:
-		tw.interpolate_property(no, "scale", Vector2(de, de), Vector2.ONE, dur, Tween.TRANS_BACK, Tween.EASE_OUT, atraso)
+		tw.interpolate_property(no, "scale", Vector2(de, de), Vector2.ONE, dur, Tween.TRANS_QUART, Tween.EASE_OUT, atraso)
 	tw.start()
 
 
@@ -88,10 +89,14 @@ static func deslizar(no: Control, de: Vector2, atraso := 0.0, dur := 0.5) -> voi
 	tw.start()
 
 
-## Um "soco" de escala (pontos mudando, combo).
+## Um "soco" (pontos mudando, combo): encolhe um pouco e volta ao tamanho
+## certo, com um clarão no brilho. Nunca passa de 1,0 - a letra ampliada
+## fica serrilhada na TV.
 static func pulsar(no: Control, forca := 0.18, dur := 0.3) -> void:
 	var tw := _tween(no)
-	tw.interpolate_property(no, "rect_scale", Vector2.ONE * (1.0 + forca), Vector2.ONE, dur, Tween.TRANS_BACK, Tween.EASE_OUT)
+	tw.interpolate_property(no, "rect_scale", Vector2.ONE * (1.0 - forca * 0.5), Vector2.ONE, dur, Tween.TRANS_QUART, Tween.EASE_OUT)
+	var claro := 1.0 + forca * 1.6
+	tw.interpolate_property(no, "modulate", Color(claro, claro, claro, no.modulate.a), Color(1, 1, 1, no.modulate.a), dur, Tween.TRANS_SINE, Tween.EASE_OUT)
 	tw.start()
 
 
@@ -112,8 +117,8 @@ static func flutuar(pai: Node, texto: String, fonte: Font, cor: Color, de: Vecto
 	l.rect_position = de - l.rect_size / 2
 	pai.add_child(l)
 	var tw := _tween(l)
-	tw.interpolate_property(l, "rect_scale", Vector2(0.3, 0.3), Vector2(1.25, 1.25), 0.22, Tween.TRANS_BACK, Tween.EASE_OUT)
-	tw.interpolate_property(l, "rect_scale", Vector2(1.25, 1.25), Vector2(0.8, 0.8), dur - 0.22, Tween.TRANS_SINE, Tween.EASE_IN, 0.22)
+	tw.interpolate_property(l, "rect_scale", Vector2(0.3, 0.3), Vector2.ONE, 0.22, Tween.TRANS_QUART, Tween.EASE_OUT)
+	tw.interpolate_property(l, "rect_scale", Vector2.ONE, Vector2(0.75, 0.75), dur - 0.22, Tween.TRANS_SINE, Tween.EASE_IN, 0.22)
 	tw.interpolate_property(l, "rect_position", l.rect_position, ate - l.rect_size / 2, dur, Tween.TRANS_QUAD, Tween.EASE_IN)
 	tw.interpolate_property(l, "modulate:a", 1.0, 0.0, 0.25, Tween.TRANS_SINE, Tween.EASE_IN, dur - 0.25)
 	tw.interpolate_callback(l, dur, "queue_free")

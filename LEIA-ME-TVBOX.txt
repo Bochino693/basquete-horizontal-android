@@ -4,7 +4,7 @@ SWISH ARENA - BASQUETE ARCADE 1 JOGADOR - TV BOX ANDROID 7.1 EM DIANTE
 Jogo novo, no estilo das maquinas de basquete modernas (Game On): placar
 de LED gigante, fases com meta, modo EM CHAMAS, ultimos segundos valendo
 mais, ranking e recorde. Feito no Godot 3.6 (GLES2) para rodar leve ate na
-TV Box S905L (Android 7.1). Versao 1.2.0-tvbox (aparece na tela de
+TV Box S905L (Android 7.1). Versao 1.2.1-tvbox (aparece na tela de
 CONFIGURACAO, embaixo do teste dos LEDs, e no Android em Aplicativos >
 Swish Arena).
 
@@ -24,8 +24,8 @@ Swish Arena).
     sozinho.
   Tudo isso e ajustavel na CONFIGURACAO.
   - Na arena: lampadas da moldura em alta definicao acendendo em sequencia
-    e o letreiro de LED correndo (SWISH ARENA, SHOW YOUR GAME, LAZER &
-    SPORT GAMES), passando por tras da tabela.
+    e o letreiro de NEON correndo liso (SWISH ARENA, SHOW YOUR GAME,
+    LAZER & SPORT GAMES), passando por tras da tabela.
   - CADA CESTA (1.1.0): a bola sai GRANDE de baixo da tela, voa em
     perspectiva com rastro de luz (dourado no SPRINT, de fogo no EM
     CHAMAS) e vai diminuindo ate cair no aro. No aro: SWISH com ondas de
@@ -33,11 +33,29 @@ Swish Arena).
     (mais forte com combo ou EM CHAMAS). FOGOS DE ARTIFICIO na META BATIDA,
     ao entrar EM CHAMAS e no NOVO RECORDE, que agora aparece AO VIVO,
     no meio da partida, quando passa o recorde.
-  - SEM TRAVAR (1.1.0): placar, numeros do relogio e anel do tempo
-    desenhados por shader em alta resolucao (nao sao refeitos a cada
-    quadro), textos de aviso com tamanhos fixos ja preparados na entrada da
-    partida e bolas, ondas e avisos reaproveitados (nada e criado durante
-    a cesta). O clarao da tela inteira so vem nos momentos fortes.
+  - SEM TRAVAR (1.1.0): textos de aviso com tamanhos fixos ja preparados
+    na entrada da partida e bolas, ondas e avisos reaproveitados (nada e
+    criado durante a cesta). O clarao da tela inteira so vem nos momentos
+    fortes.
+  - NITIDO NA TV BOX, NADA PIXELADO (1.2.1):
+      * placar de LED e numeros do relogio: cada segmento e geometria com
+        a borda lisa (1 pixel da tela), do jeito que a placa Mali desenha
+        liso - montada uma vez (guardada) e so trocada quando o numero
+        muda;
+      * o anel do relogio e o PONTEIRO (o ponto branco na ponta do arco)
+        tambem: borda lisa, sem serrilhado;
+      * o letreiro da arena virou letras de NEON de fonte de verdade
+        correndo liso (antes eram pontinhos de LED - "quadriculado");
+      * nenhum texto e ampliado alem do tamanho da fonte (a contagem 3-2-1,
+        os avisos, o "+2", o pulo dos numeros): cresce ate o tamanho certo
+        e o "soco" e um clarao. Letra ampliada fica serrilhada na TV;
+      * na cesta, so a ARENA (fundo, tabela, aro) da o zoom e treme: o
+        placar, os paineis e os textos ficam firmes e nitidos;
+      * a CONFIGURACAO mostra a imagem que a TV Box entrega (embaixo da
+        versao): "IMAGEM 1920x1080" e o certo. Se aparecer "TV BOX EM
+        720p: PONHA EM 1080p" (em vermelho), o Android da TV Box esta em
+        720p e nada fica nitido de verdade: Configuracoes > Tela >
+        Resolucao > 1080p 60Hz.
   - ABERTURA NOVA (1.2.0): o RECORDE, o RANKING e o COMO JOGAR viraram
     CARTOES DE VIDRO (fundo escuro translucido, borda de neon e uma faixa
     de luz que atravessa o cartao). Na entrada cada peca chega no seu
@@ -119,9 +137,11 @@ Swish Arena).
               placar_led.gd, cesta.gd, fundo_animado.gd, anel_tempo.gd...
   scripts/    (1.1.0) arremesso.gd (a bola grande em perspectiva),
               fogos.gd (fogos de artificio), bola3d.gd
-  shaders/    display7 (digitos de LED), anel_tempo, bola
-  tools/      gerar_sons.py, gerar_arte.py e gerar_efeitos.py (efeitos,
-              digitos e pecas geradas por codigo), gerar_apk/ (gerador
+  shaders/    bola, luzes_arena, rede_mola, brilho_texto, brilho_logo
+              (placar, relogio e letreiro: geometria lisa e fonte, sem
+              shader)
+  tools/      gerar_sons.py, gerar_arte.py e gerar_efeitos.py (efeitos e
+              pecas geradas por codigo), gerar_apk/ (gerador
               do APK)
 
 

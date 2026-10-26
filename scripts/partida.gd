@@ -86,6 +86,7 @@ var _flutua_prox := 0
 var _flutua_lado := 1.0
 var _tremor := 0.0
 var _raiz: Control
+var _arena: Control
 
 # fontes
 var f_titulo: Font
@@ -134,6 +135,14 @@ func _montar() -> void:
 	_raiz.anchor_bottom = 1
 	_raiz.mouse_filter = MOUSE_FILTER_IGNORE
 	add_child(_raiz)
+	# a ARENA (fundo, tabela, aro, chamas) é o que dá o "zoom" e treme na
+	# cesta; o placar, os painéis e os textos ficam firmes, no tamanho
+	# certo (letra ampliada ou fora do pixel fica serrilhada na TV)
+	_arena = Control.new()
+	_arena.anchor_right = 1
+	_arena.anchor_bottom = 1
+	_arena.mouse_filter = MOUSE_FILTER_IGNORE
+	_raiz.add_child(_arena)
 
 	fundo = preload("res://scripts/fundo_animado.gd").new()
 	fundo.imagem = "res://imagens/fundo_arena.png"
@@ -141,7 +150,7 @@ func _montar() -> void:
 	fundo.holofotes = [Vector2(120, 32), Vector2(373, 32), Vector2(907, 32), Vector2(1160, 32)]
 	fundo.qtd_feixes = 2
 	fundo.escurecer = 0.0
-	_raiz.add_child(fundo)
+	_arena.add_child(fundo)
 
 	# a tabela de vidro da arte acende a cada cesta (desenhada uma vez)
 	_tabela = Node2D.new()
@@ -150,17 +159,17 @@ func _montar() -> void:
 	_tabela.material = aditivo
 	_tabela.modulate = Color(1, 1, 1, 0)
 	_tabela.connect("draw", self, "_desenhar_tabela")
-	_raiz.add_child(_tabela)
+	_arena.add_child(_tabela)
 	_raiz.connect("resized", self, "_posicionar_tabela")
 	_posicionar_tabela()
 
 	cesta = preload("res://scripts/cesta.gd").new()
 	cesta.position = RIM
-	_raiz.add_child(cesta)
+	_arena.add_child(cesta)
 	cesta.connect("swish", self, "_no_swish")
 
 	chamas_tela = _criar_chamas_da_tela()
-	_raiz.add_child(chamas_tela)
+	_arena.add_child(chamas_tela)
 
 	# ---- placar central (LED gigante)
 	painel_placar = UI.painel(Jogo.LARANJA)
@@ -246,7 +255,7 @@ func _montar() -> void:
 	camada_fx.mouse_filter = MOUSE_FILTER_IGNORE
 	_raiz.add_child(camada_fx)
 	# o "zoom" de impacto do SWISH é em volta do aro
-	_raiz.rect_pivot_offset = RIM
+	_arena.rect_pivot_offset = RIM
 	# avisos e "+N": prontos (um aviso só, trocado; quatro "+N" em rodízio)
 	_aviso_atual = UI.label("", f_aviso, Jogo.BRANCO)
 	UI.colocar(_aviso_atual, 160, 332, 960, 106)
@@ -361,7 +370,7 @@ func _numero_grande(texto: String, cor: Color) -> void:
 	camada_fx.add_child(l)
 	var tw := Tween.new()
 	l.add_child(tw)
-	tw.interpolate_property(l, "rect_scale", Vector2(2.4, 2.4), Vector2.ONE, 0.35, Tween.TRANS_BACK, Tween.EASE_OUT)
+	tw.interpolate_property(l, "rect_scale", Vector2(0.4, 0.4), Vector2.ONE, 0.3, Tween.TRANS_EXPO, Tween.EASE_OUT)
 	tw.interpolate_property(l, "modulate:a", 0.0, 1.0, 0.15)
 	tw.interpolate_property(l, "rect_scale", Vector2.ONE, Vector2(0.6, 0.6), 0.3, Tween.TRANS_SINE, Tween.EASE_IN, 0.5)
 	tw.interpolate_property(l, "modulate:a", 1.0, 0.0, 0.3, Tween.TRANS_SINE, Tween.EASE_IN, 0.5)
@@ -393,7 +402,7 @@ func _banner(titulo: String, sub: String, cor: Color, dur: float) -> void:
 	var tw := Tween.new()
 	faixa.add_child(tw)
 	faixa.rect_pivot_offset = Vector2(640, 110)
-	tw.interpolate_property(faixa, "rect_scale", Vector2(1, 0), Vector2(1, 1), 0.28, Tween.TRANS_BACK, Tween.EASE_OUT)
+	tw.interpolate_property(faixa, "rect_scale", Vector2(1, 0), Vector2(1, 1), 0.28, Tween.TRANS_QUART, Tween.EASE_OUT)
 	tw.interpolate_property(lt, "rect_position:x", -900.0, 0.0, 0.45, Tween.TRANS_QUINT, Tween.EASE_OUT, 0.1)
 	tw.interpolate_property(ls, "rect_position:x", 900.0, 0.0, 0.45, Tween.TRANS_QUINT, Tween.EASE_OUT, 0.18)
 	tw.interpolate_property(faixa, "rect_scale", Vector2(1, 1), Vector2(1, 0), 0.25, Tween.TRANS_SINE, Tween.EASE_IN, dur)
@@ -526,8 +535,8 @@ func _no_swish(cor: Color) -> void:
 	if forte:
 		fundo.flash(cor, 0.3)
 	var tw := create_tween()
-	tw.tween_property(_raiz, "rect_scale", Vector2.ONE * (1.045 if forte else 1.03), 0.07).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	tw.tween_property(_raiz, "rect_scale", Vector2.ONE, 0.26).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(_arena, "rect_scale", Vector2.ONE * (1.045 if forte else 1.03), 0.07).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.tween_property(_arena, "rect_scale", Vector2.ONE, 0.26).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 ## Bateu o recorde da máquina NO MEIO da partida: festa na hora e o painel
@@ -604,10 +613,10 @@ func _flutuar(texto: String, cor: Color, de: Vector2, ate: Vector2, atraso := 0.
 	if atraso > 0.0:
 		tw.tween_interval(atraso)
 		tw.tween_callback(l, "set_visible", [true])
-	tw.tween_property(l, "rect_scale", Vector2(1.25, 1.25), 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(l, "rect_scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 	tw.parallel().tween_property(l, "rect_position", ate - l.rect_size / 2, 0.8).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tw.tween_property(l, "rect_scale", Vector2(0.9, 0.9), 0.38)
-	tw.tween_property(l, "rect_scale", Vector2.ZERO, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	tw.tween_property(l, "rect_scale", Vector2(0.85, 0.85), 0.38)
+	tw.tween_property(l, "rect_scale", Vector2.ZERO, 0.2).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_IN)
 	tw.tween_callback(l, "set_visible", [false])
 
 
@@ -629,10 +638,10 @@ func _aviso(texto: String, cor: Color, dur: float, grande := false) -> void:
 	# entra crescendo e sai encolhendo: o texto com contorno fica sempre
 	# inteiro (meio transparente o contorno aparece por dentro das letras)
 	_aviso_tw = create_tween()
-	_aviso_tw.tween_property(l, "rect_scale", Vector2(1.08, 1.08), 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	_aviso_tw.tween_property(l, "rect_scale", Vector2.ONE, 0.15).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	_aviso_tw.tween_property(l, "rect_scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	_aviso_tw.tween_interval(0.05)
 	_aviso_tw.tween_interval(max(0.1, dur - 0.55))
-	_aviso_tw.tween_property(l, "rect_scale", Vector2.ZERO, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	_aviso_tw.tween_property(l, "rect_scale", Vector2.ZERO, 0.2).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_IN)
 	_aviso_tw.tween_callback(l, "set_visible", [false])
 
 
@@ -686,9 +695,9 @@ func _process(delta: float) -> void:
 	# tremor da tela
 	if _tremor > 0.0:
 		_tremor = max(0.0, _tremor - delta * 30.0)
-		_raiz.rect_position = Vector2(rand_range(-_tremor, _tremor), rand_range(-_tremor, _tremor))
-	elif _raiz.rect_position != Vector2.ZERO:
-		_raiz.rect_position = Vector2.ZERO
+		_arena.rect_position = Vector2(rand_range(-_tremor, _tremor), rand_range(-_tremor, _tremor))
+	elif _arena.rect_position != Vector2.ZERO:
+		_arena.rect_position = Vector2.ZERO
 	# a tabela acesa vai apagando (no EM CHAMAS ela fica pulsando laranja)
 	_tabela_brilho = max(0.0, _tabela_brilho - delta * 2.2)
 	var base := 0.0

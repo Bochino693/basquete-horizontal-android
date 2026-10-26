@@ -120,6 +120,17 @@ func _ready() -> void:
 	var versao := UI.label("VERSÃO " + Jogo.VERSAO, Jogo.fonte("bungee", 16, 2), Jogo.CIANO)
 	UI.colocar(versao, 890, TOPO + 556, 340, 26)
 	add_child(versao)
+	# a imagem que a TV Box entrega: menos de 1080 linhas (Android em 720p)
+	# nada fica nítido de verdade até trocar a resolução no Android
+	var j := OS.window_size
+	var tela := "IMAGEM %dx%d" % [int(j.x), int(j.y)]
+	var cor_tela := Jogo.CIANO
+	if j.y < 1000.0:
+		tela = "TV BOX EM %dp: PONHA EM 1080p" % int(j.y)
+		cor_tela = Jogo.VERMELHO
+	var lbl_tela := UI.label(tela, Jogo.fonte("bungee", 16, 2), cor_tela)
+	UI.colocar(lbl_tela, 890, TOPO + 578, 340, 22)
+	add_child(lbl_tela)
 	_mover_destaque(false)
 
 

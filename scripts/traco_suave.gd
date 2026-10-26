@@ -32,9 +32,32 @@ func preparar(no: CanvasItem) -> void:
 	franja = 1.15 / max(abs(esc), 0.05)
 
 
+## A franja para uma escala na tela já conhecida (pixels da tela por unidade).
+func preparar_escala(esc: float) -> void:
+	pontos.resize(0)
+	cores.resize(0)
+	indices.resize(0)
+	franja = 1.15 / max(abs(esc), 0.05)
+
+
 func desenhar(no: CanvasItem) -> void:
 	if indices.size() > 0:
 		VisualServer.canvas_item_add_triangle_array(no.get_canvas_item(), indices, pontos, cores)
+
+
+## O lote numa malha pronta (MeshInstance2D): montada uma vez, desenhada
+## pela placa de vídeo sem nada ser refeito no GDScript.
+func malha() -> ArrayMesh:
+	var m := ArrayMesh.new()
+	if indices.size() == 0:
+		return m
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = pontos
+	arr[Mesh.ARRAY_COLOR] = cores
+	arr[Mesh.ARRAY_INDEX] = indices
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	return m
 
 
 func _v(p: Vector2, c: Color) -> int:

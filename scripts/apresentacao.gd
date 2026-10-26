@@ -378,7 +378,7 @@ func _roteiro() -> void:
 	for i in range(_letras.size()):
 		var l: Label = _letras[i]
 		var tg := _tw()
-		tg.interpolate_property(l, "rect_scale", Vector2(2.6, 2.6), Vector2.ONE, 0.24, Tween.TRANS_BACK, Tween.EASE_OUT)
+		tg.interpolate_property(l, "rect_scale", Vector2(0.45, 0.45), Vector2.ONE, 0.24, Tween.TRANS_EXPO, Tween.EASE_OUT)
 		tg.interpolate_property(l, "modulate:a", 0.0, 1.0, 0.1)
 		tg.start()
 		Jogo.tocar("tique", -4.0, 0.9 + i * 0.12)
@@ -394,7 +394,7 @@ func _roteiro() -> void:
 	ta.interpolate_property(_linha, "rect_scale", Vector2(0, 1), Vector2.ONE, 0.35, Tween.TRANS_QUART, Tween.EASE_OUT)
 	ta.interpolate_property(_linha_brilho, "modulate:a", 0.0, 0.85, 0.35)
 	ta.interpolate_property(_apresenta, "modulate:a", 0.0, 1.0, 0.45, Tween.TRANS_SINE, Tween.EASE_OUT, 0.2)
-	ta.interpolate_property(_apresenta, "rect_scale", Vector2(1.25, 1.0), Vector2.ONE, 0.6, Tween.TRANS_QUART, Tween.EASE_OUT, 0.2)
+	ta.interpolate_property(_apresenta, "rect_scale", Vector2(0.8, 1.0), Vector2.ONE, 0.6, Tween.TRANS_QUART, Tween.EASE_OUT, 0.2)
 	ta.start()
 	yield(_esperar(0.9), "completed")
 	if _saindo:

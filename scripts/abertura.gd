@@ -458,14 +458,14 @@ func _entrada(da_apresentacao: bool) -> void:
 	_logo.rect_scale = Vector2.ZERO
 	var tl := _novo_tween()
 	tl.tween_interval(a + 0.18)
-	tl.tween_property(_logo, "rect_scale", Vector2.ONE, 0.55).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tl.tween_property(_logo, "rect_scale", Vector2.ONE, 0.55).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 	# o cartão chega da direita e as linhas entram uma a uma
 	_painel.rect_position = PAINEL_POS + Vector2(470, 0)
 	_titulo.rect_scale = Vector2(1, 0)
 	var tp := _novo_tween()
 	tp.tween_interval(a + 0.22)
 	tp.tween_property(_painel, "rect_position", PAINEL_POS, 0.75).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
-	tp.parallel().tween_property(_titulo, "rect_scale", Vector2.ONE, 0.45).set_delay(0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tp.parallel().tween_property(_titulo, "rect_scale", Vector2.ONE, 0.45).set_delay(0.3).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 	tp.tween_callback(_painel, "varrer")
 	_linhas_entram(_paginas[0], a + 0.5)
 	# a chamada cresce (sobe um pouco) e a luz passa nela
@@ -473,7 +473,7 @@ func _entrada(da_apresentacao: bool) -> void:
 	_chamada.rect_position = CHAMADA_POS + Vector2(0, 36)
 	var tc := _novo_tween()
 	tc.tween_interval(a + 0.45)
-	tc.tween_property(_chamada, "rect_scale", Vector2.ONE, 0.65).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tc.tween_property(_chamada, "rect_scale", Vector2.ONE, 0.65).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 	tc.parallel().tween_property(_chamada, "rect_position", CHAMADA_POS, 0.65).set_trans(Tween.TRANS_QUINT).set_ease(Tween.EASE_OUT)
 	_proximo_brilho = a + 1.15
 
@@ -495,7 +495,7 @@ func _linhas_entram(pagina: Control, atraso: float) -> void:
 		_vazio.rect_pivot_offset = PAINEL_TAM * 0.5
 		var tv := _novo_tween()
 		tv.tween_interval(atraso)
-		tv.tween_property(_vazio, "rect_scale", Vector2.ONE, 0.5).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tv.tween_property(_vazio, "rect_scale", Vector2.ONE, 0.5).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 
 
 # ================================================================ por quadro
@@ -510,7 +510,7 @@ func _process(delta: float) -> void:
 	# chamada pulsando e trocando de cor (depois de entrar)
 	var k: float = abs(sin(_t * 2.6))
 	if _t > 1.6 and not _saindo:
-		_chamada.rect_scale = Vector2.ONE * (1.0 + k * 0.05)
+		_chamada.rect_scale = Vector2.ONE * (0.96 + k * 0.04)
 	_chamada.add_color_override("font_color", Jogo.LARANJA.linear_interpolate(Jogo.AMARELO, k))
 	# a faixa de luz nas letras da chamada (de tempos em tempos)
 	if _brilho_chamada < 0.0 and _t >= _proximo_brilho:
@@ -575,7 +575,7 @@ func _virar_painel() -> void:
 	tw.parallel().tween_property(_titulo, "rect_scale", Vector2(1, 0), 0.16).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	tw.parallel().tween_property(_painel, "cor", Jogo.ROXO if _painel_modo == 0 else Jogo.ROSA, 0.5)
 	tw.parallel().tween_callback(self, "_titulo_da_pagina").set_delay(0.16)
-	tw.parallel().tween_property(_titulo, "rect_scale", Vector2.ONE, 0.3).set_delay(0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(_titulo, "rect_scale", Vector2.ONE, 0.3).set_delay(0.18).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 	tw.tween_callback(de, "set_visible", [false])
 	tw.tween_interval(0.5)
 	tw.tween_callback(self, "_virou")
@@ -631,10 +631,10 @@ func _cesta_demo() -> void:
 	_swish.rect_scale = Vector2(0.3, 0.3)
 	_swish.visible = true
 	var tw := _novo_tween()
-	tw.tween_property(_swish, "rect_scale", Vector2(1.25, 1.25), 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(_swish, "rect_scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 	tw.parallel().tween_property(_swish, "rect_position", ate - _swish.rect_size / 2, 0.9).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tw.tween_property(_swish, "rect_scale", Vector2(0.9, 0.9), 0.45)
-	tw.tween_property(_swish, "rect_scale", Vector2.ZERO, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	tw.tween_property(_swish, "rect_scale", Vector2(0.85, 0.85), 0.45)
+	tw.tween_property(_swish, "rect_scale", Vector2.ZERO, 0.2).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_IN)
 	tw.tween_callback(_swish, "set_visible", [false])
 
 

@@ -5,7 +5,7 @@ extends Node
 
 ## A VERSÃO DO JOGO (a mesma do export_presets.cfg, version/name; a tela de
 ## configuração mostra). O tools/conferir_lista_build.py confere as duas.
-const VERSAO := "1.2.0-tvbox"
+const VERSAO := "1.2.1-tvbox"
 
 const CAMINHO_CONFIG := "user://swish_config.cfg"
 const CAMINHO_RANKING := "user://swish_ranking.json"
@@ -49,6 +49,7 @@ var ranking := []   # [{pontos, fase, cestas, data}], do maior para o menor
 var apresentou := false   # a apresentação já abriu o jogo nesta vez
 
 var _fontes := {}
+var malhas := {}       # geometria pronta (placar de LED, relógio): montada uma vez por tamanho
 var _sons := {}
 var _canais := []
 var _proximo_canal := 0
