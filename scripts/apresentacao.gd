@@ -105,6 +105,75 @@ func _ready() -> void:
 	Jogo.musica("abertura", -3.0)
 	# rede de segurança: aconteça o que acontecer, segue para a abertura
 	get_tree().create_timer(SEGURANCA).connect("timeout", self, "_ir_abertura")
+	_preparar()
+
+
+## SEM ENGASGO NO MEIO DA ANIMAÇÃO: os primeiros quadros mostram a capa (a
+## mesma imagem de abertura do app, parada: é o primeiro quadro da
+## apresentação) e, por baixo dela, TUDO o que a apresentação vai mostrar
+## é desenhado uma vez (as letras grandes, os shaders, a cesta, a arte, as
+## partículas). Na Mali-450 preparar um shader ou uma letra grande custa um
+## tranco: aqui ele acontece com a imagem parada, onde não aparece. Depois
+## a capa sai (é igual ao quadro de baixo: não pisca) e a animação começa.
+func _preparar() -> void:
+	var capa := TextureRect.new()
+	capa.texture = load("res://imagens/splash_lazer.png")
+	capa.expand = true
+	capa.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	capa.anchor_right = 1
+	capa.anchor_bottom = 1
+	capa.mouse_filter = MOUSE_FILTER_IGNORE
+	add_child(capa)
+	var swish := UI.label("SWISH!", Jogo.fonte("titan", 96, 8), Jogo.AMARELO)
+	UI.colocar(swish, 200, 200, 600, 140)
+	add_child(swish)
+	move_child(swish, capa.get_index())
+	for l in _letras:
+		l.modulate.a = 1.0
+	_apresenta.modulate.a = 1.0
+	_linha.rect_scale = Vector2.ONE
+	_linha_brilho.modulate.a = 0.8
+	for f in _faixas:
+		f.visible = true
+		f.position = _tela * 0.5
+	_bola.visible = true
+	for r in _rastro:
+		r.visible = true
+	_cesta.visible = true
+	_cesta.anotar(Jogo.AMARELO)
+	_fundo.visible = true
+	_brilho.modulate.a = 0.5
+	for f in _feixes:
+		f.modulate.a = 1.0
+	_estouro.emitting = true
+	_estrelas.emitting = true
+	_faiscas.emitting = true
+	for i in 4:
+		yield(get_tree(), "idle_frame")
+	# tudo de volta como no primeiro quadro
+	swish.queue_free()
+	for l in _letras:
+		l.modulate.a = 0.0
+	_apresenta.modulate.a = 0.0
+	_linha.rect_scale = Vector2(0, 1)
+	_linha_brilho.modulate.a = 0.0
+	for f in _faixas:
+		f.visible = false
+		f.position = Vector2(-700, _tela.y * 0.5)
+	_bola.visible = false
+	for r in _rastro:
+		r.visible = false
+	_cesta.visible = false
+	_fundo.visible = false
+	_brilho.modulate.a = 0.0
+	for f in _feixes:
+		f.modulate.a = 0.0
+	for p in [_estouro, _estrelas, _faiscas]:
+		p.restart()
+		p.emitting = false
+	capa.queue_free()
+	if _saindo:
+		return
 	_roteiro()
 
 
@@ -416,12 +485,13 @@ func _roteiro() -> void:
 	_ir_abertura()
 
 
-## A abertura começa com a mesma arte: sem cortina.
+## A abertura começa com a mesma arte: sem cortina (ela já está pronta:
+## só entra).
 func _ir_abertura() -> void:
 	if _saindo:
 		return
 	_saindo = true
-	get_tree().change_scene("res://cenas/abertura.tscn")
+	Jogo.trocar_cena(Jogo.CENA_ABERTURA)
 
 
 func _process(delta: float) -> void:

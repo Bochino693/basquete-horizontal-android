@@ -5,7 +5,7 @@ extends Node
 
 ## A VERSÃO DO JOGO (a mesma do export_presets.cfg, version/name; a tela de
 ## configuração mostra). O tools/conferir_lista_build.py confere as duas.
-const VERSAO := "1.1.1-tvbox"
+const VERSAO := "1.2.0-tvbox"
 
 const CAMINHO_CONFIG := "user://swish_config.cfg"
 const CAMINHO_RANKING := "user://swish_ranking.json"
@@ -13,6 +13,7 @@ const TAMANHO_RANKING := 10
 ## A apresentação animada é OPCIONAL: o jogo abre pela abertura e só vai
 ## para ela se a cena existir (um APK sem ela continua rodando).
 const CENA_APRESENTACAO := "res://cenas/apresentacao.tscn"
+const CENA_ABERTURA := "res://cenas/abertura.tscn"
 
 ## Cores vivas do jogo (as mesmas da arte SWISH ARENA).
 const LARANJA := Color(1.0, 0.48, 0.10)
@@ -56,6 +57,11 @@ var _musica_nome := ""
 var _tween: Tween
 var _cortina: ColorRect
 var _trocando := false
+## A ABERTURA FICA PRONTA: montada uma vez só (na capa, quando o app abre)
+## e guardada aqui enquanto outra tela está na frente. Voltar para ela é
+## instantâneo: nada de montar arte, fontes e ranking de novo (era o
+## "engasgo" de meio segundo ao entrar na abertura).
+var _abertura: Node = null
 
 
 func _ready() -> void:
@@ -292,6 +298,51 @@ static func pede_config(ev: InputEvent) -> bool:
 
 
 # ---------------------------------------------------------- troca de tela
+## A abertura avisa que existe (ela é a cena que o app abre).
+func guardar_abertura(a: Node) -> void:
+	_abertura = a
+
+
+func _exit_tree() -> void:
+	# a abertura guardada (fora da árvore) sai junto com o jogo
+	if is_instance_valid(_abertura) and not _abertura.is_inside_tree():
+		_abertura.free()
+
+
+## Troca a cena na hora, sem cortina. A abertura nunca é apagada: sai da
+## árvore e fica guardada; ao voltar ela só ENTRA de novo (abertura.entrar).
+func trocar_cena(cena: String) -> void:
+	var arvore := get_tree()
+	var velha := arvore.current_scene
+	var nova: Node
+	if cena == CENA_ABERTURA and is_instance_valid(_abertura):
+		nova = _abertura
+	else:
+		var pc: PackedScene = load(cena)
+		if pc == null:
+			return
+		nova = pc.instance()
+	if velha == nova:
+		if nova == _abertura:
+			nova.entrar(false)
+		return
+	if velha != null:
+		if velha.get_parent() != null:
+			velha.get_parent().remove_child(velha)
+		if velha == _abertura:
+			velha.sair()
+		else:
+			velha.queue_free()
+	arvore.root.add_child(nova)
+	arvore.current_scene = nova
+	if nova == _abertura:
+		nova.entrar(cena_anterior_era_apresentacao(velha))
+
+
+static func cena_anterior_era_apresentacao(velha: Node) -> bool:
+	return velha != null and velha.name == "Apresentacao"
+
+
 ## Escurece, troca a cena por baixo e clareia de novo.
 func ir_para(cena: String) -> void:
 	if _trocando:
@@ -300,7 +351,7 @@ func ir_para(cena: String) -> void:
 	_tween.interpolate_property(_cortina, "modulate:a", _cortina.modulate.a, 1.0, 0.28, Tween.TRANS_SINE, Tween.EASE_IN)
 	_tween.start()
 	yield(_tween, "tween_all_completed")
-	get_tree().change_scene(cena)
+	trocar_cena(cena)
 	yield(get_tree(), "idle_frame")
 	yield(get_tree(), "idle_frame")
 	_tween.interpolate_property(_cortina, "modulate:a", 1.0, 0.0, 0.45, Tween.TRANS_SINE, Tween.EASE_OUT)

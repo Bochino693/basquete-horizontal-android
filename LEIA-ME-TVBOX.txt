@@ -4,7 +4,7 @@ SWISH ARENA - BASQUETE ARCADE 1 JOGADOR - TV BOX ANDROID 7.1 EM DIANTE
 Jogo novo, no estilo das maquinas de basquete modernas (Game On): placar
 de LED gigante, fases com meta, modo EM CHAMAS, ultimos segundos valendo
 mais, ranking e recorde. Feito no Godot 3.6 (GLES2) para rodar leve ate na
-TV Box S905L (Android 7.1). Versao 1.1.1-tvbox (aparece na tela de
+TV Box S905L (Android 7.1). Versao 1.2.0-tvbox (aparece na tela de
 CONFIGURACAO, embaixo do teste dos LEDs, e no Android em Aplicativos >
 Swish Arena).
 
@@ -38,6 +38,15 @@ Swish Arena).
     quadro), textos de aviso com tamanhos fixos ja preparados na entrada da
     partida e bolas, ondas e avisos reaproveitados (nada e criado durante
     a cesta). O clarao da tela inteira so vem nos momentos fortes.
+  - ABERTURA NOVA (1.2.0): o RECORDE, o RANKING e o COMO JOGAR viraram
+    CARTOES DE VIDRO (fundo escuro translucido, borda de neon e uma faixa
+    de luz que atravessa o cartao). Na entrada cada peca chega no seu
+    tempo: o recorde desce contando ate o numero, o logo cresce, o cartao
+    desliza da direita e as linhas entram uma a uma (ranking com medalhas
+    de ouro, prata e bronze e a coroa no recorde); a troca RANKING <->
+    COMO JOGAR vira a pagina. Tudo ja fica pronto atras da capa (a tela
+    de abertura e montada uma vez e reaproveitada): sem aquele "travadinho"
+    ao sair da capa ou ao voltar da partida.
   - APRESENTACAO (abre o jogo e volta depois de 1 minuto parado na
     abertura): o app ja abre com o LOGO DA LAZER & SPORT (a imagem de
     abertura do app e o primeiro quadro da apresentacao: nenhuma tela
